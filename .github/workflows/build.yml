@@ -5,7 +5,6 @@ on:
   pull_request:
 
 env:
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   # errexit and pipefail set by the runner
   SHELLOPTS: nounset
 
@@ -32,4 +31,6 @@ jobs:
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
       - name: Build, Tag, and Push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: nix run
