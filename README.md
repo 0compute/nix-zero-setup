@@ -104,8 +104,11 @@ change:
 name: Build Container
 on:
   push:
-    branches: [ main ]
-    paths: [ 'flake.lock', 'flake.nix' ]
+    branches:
+      - main
+    paths:
+      - flake.lock
+      - flake.nix
 
 jobs:
   push:
@@ -127,7 +130,9 @@ In your main `.github/workflows/ci.yml`:
 
 ```yaml
 name: CI
-on: [ push, pull_request ]
+on:
+  - push
+  - pull_request
 
 jobs:
   test:
