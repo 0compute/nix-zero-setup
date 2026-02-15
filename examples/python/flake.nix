@@ -37,10 +37,8 @@
         packages.build-container = inputs.nix-zero-setup.lib.mkBuildContainer {
           inherit pkgs;
           name = "ml-build-env";
-          contents = with pkgs; [
-            pythonEnv
-            hatch
-          ];
+          inputsFrom = [ pythonEnv ];
+          contents = with pkgs; [ hatch ];
         };
       }
     );

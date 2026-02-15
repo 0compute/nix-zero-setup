@@ -8,7 +8,7 @@ let
       expr = lib.sort (a: b: a < b) (
         (nixZeroSetupLib.mkBuildContainer {
           inherit pkgs;
-          drv = pkgs.hello;
+          inputsFrom = [ pkgs.hello ];
           nixConf = "extra-features = nix-command";
         }).config.Env
       );
@@ -24,7 +24,7 @@ let
       expr =
         (nixZeroSetupLib.mkBuildContainer {
           inherit pkgs;
-          drv = pkgs.hello;
+          inputsFrom = [ pkgs.hello ];
         }).name;
       expected = "hello-build-container.tar.gz";
     };
@@ -80,7 +80,8 @@ let
             buildInputs = with pkgs; [ hello ];
           };
           container = nixZeroSetupLib.mkBuildContainer {
-            inherit pkgs drv;
+            inherit pkgs;
+            inputsFrom = [ drv ];
             contents = with pkgs; [ jq ];
           };
         in

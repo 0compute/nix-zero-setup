@@ -87,8 +87,8 @@ In your `flake.nix` outputs:
       {
         packages.build-container = inputs.nix-zero-setup.lib.mkBuildContainer {
           inherit pkgs;
-          # automatically include buildInputs from your main package
-          drv = inputs.self.packages.${system}.default;
+          # automatically include dependencies from your main package
+          inputsFrom = [ inputs.self.packages.${system}.default ];
           # or add extra packages manually
           contents = with pkgs; [
             jq

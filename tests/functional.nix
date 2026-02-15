@@ -39,15 +39,15 @@ pkgs.testers.runNixOSTest {
               pkgs = { 
                 lib = (import "${pkgs.path}" { }).lib;
                 nix = { outPath = "/bin/nix"; };
-                coreutils = { outPath = "${pkgs.coreutils}"; };
+                coreutils = { outPath = "/bin"; };
                 bashInteractive = { outPath = "/bin/bash"; };
                 dockerTools.buildLayeredImageWithNixDb = args: 
                   derivation {
                     name = args.name;
                     builder = "/bin/sh";
-                    args = [ "-c" "touch \$out" ];
+                    args = [ "-c" "/bin/touch \$out" ];
                     system = "x86_64-linux";
-                    PATH = "${pkgs.coreutils}/bin";
+                    PATH = "/bin";
                   };
                 cacert = { outPath = "/etc/ssl/certs/ca-bundle.crt"; };
               };
@@ -55,7 +55,7 @@ pkgs.testers.runNixOSTest {
             in lib.mkBuildContainer { 
               inherit pkgs;
               name = "test-container";
-              contents = [ pkgs.coreutils ];
+              inputsFrom = [ pkgs.coreutils ];
             };
         };
       }
@@ -71,7 +71,7 @@ pkgs.testers.runNixOSTest {
         "-v /tmp/test-project:/src -w /src " +
         "-e NIX_PATH=nixpkgs=${pkgs.path} " +
         "-v ${pkgs.path}:${pkgs.path}:ro " +
-        "${tag} build --offline --impure --verbose --accept-flake-config --extra-experimental-features 'nix-command flakes' . #default"
+        "${tag} build --offline --impure --verbose --accept-flake-config --extra-experimental-features 'nix-command flakes' .#default"
       )
     '';
 }

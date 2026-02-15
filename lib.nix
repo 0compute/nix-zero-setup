@@ -33,6 +33,8 @@
         ++ (with pkgs; [
           bashInteractive # for debug, only adds 4MB
           cacert # for fetchers
+          coreutils # basic unix tools
+          git # required for flakes
         ])
         ++ extractedInputs
         ++ args.contents or [ ];
@@ -65,8 +67,16 @@
         ])
         // {
           inherit name contents config;
-          # nix needs /tmp to build
-          extraCommands = "mkdir -m 1777 tmp";
+          # nix needs /tmp to build. we also create a standard /bin env.
+          extraCommands = ''
+            mkdir -m 1777 tmp
+            mkdir -p bin
+            for c in ${pkgs.lib.concatStringsSep " " contents}; do
+              if [ -d "$c/bin" ]; then
+                ln -s "$c"/bin/* bin/ || true
+              fi
+            done
+          '';
         }
       );
     in

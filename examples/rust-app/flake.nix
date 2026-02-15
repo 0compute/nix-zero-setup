@@ -20,25 +20,26 @@
       system:
       let
         pkgs = inputs.nixpkgs.legacyPackages.${system};
-      in
-      {
-        packages.default = pkgs.rustPlatform.buildRustPackage {
+        default = pkgs.rustPlatform.buildRustPackage {
           pname = "rust-app";
           version = "0.1.0";
           src = ./.;
           # in a real project, this would be a hash or a generated file
           cargoLock.lockFile = ./Cargo.lock;
         };
-
-        packages.build-container = inputs.nix-zero-setup.lib.mkBuildContainer {
-          inherit pkgs;
-          name = "rust-build-env";
-          contents = with pkgs; [
-            cargo
-            rustc
-            rust-analyzer
-            clippy
-          ];
+      in
+      {
+        packages = {
+          inherit default;
+          build-container = inputs.nix-zero-setup.lib.mkBuildContainer {
+            inherit pkgs;
+            name = "rust-build-env";
+            inputsFrom = [ default ];
+            contents = with pkgs; [
+              rust-analyzer
+              clippy
+            ];
+          };
         };
       }
     );

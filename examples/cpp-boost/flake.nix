@@ -20,9 +20,7 @@
       system:
       let
         pkgs = inputs.nixpkgs.legacyPackages.${system};
-      in
-      {
-        packages.default = pkgs.stdenv.mkDerivation {
+        default = pkgs.stdenv.mkDerivation {
           pname = "cpp-boost-example";
           version = "0.1.0";
           src = ./.;
@@ -32,16 +30,16 @@
           ];
           buildInputs = with pkgs; [ boost ];
         };
-
-        packages.build-container = inputs.nix-zero-setup.lib.mkBuildContainer {
-          inherit pkgs;
-          name = "cpp-boost-build-env";
-          contents = with pkgs; [
-            cmake
-            ninja
-            gcc
-            boost
-          ];
+      in
+      {
+        packages = {
+          inherit default;
+          build-container = inputs.nix-zero-setup.lib.mkBuildContainer {
+            inherit pkgs;
+            name = "cpp-boost-build-env";
+            inputsFrom = [ default ];
+            contents = with pkgs; [ gcc ];
+          };
         };
       }
     );

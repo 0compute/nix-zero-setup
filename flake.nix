@@ -28,12 +28,11 @@
       let
 
         pkgs = inputs.nixpkgs.legacyPackages.${system};
-        inherit (pkgs) lib;
 
-        nixZeroSetupContainer = self.lib.mkBuildContainer {
+        nixZeroSetupContainer = inputs.self.lib.mkBuildContainer {
           inherit pkgs;
           name = "nix-zero-setup";
-          tag = self.rev or self.dirtyRev or null;
+          tag = inputs.self.rev or inputs.self.dirtyRev or null;
         };
 
       in
@@ -57,7 +56,7 @@
 
           default = {
             type = "app";
-            program = lib.getExe (
+            program = pkgs.lib.getExe (
               let
                 inherit (nixZeroSetupContainer) imageName imageTag;
               in
@@ -81,7 +80,7 @@
 
           github-action = {
             type = "app";
-            program = lib.getExe (
+            program = pkgs.lib.getExe (
               pkgs.writeShellApplication {
                 name = "github-action";
                 text = ''
