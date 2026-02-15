@@ -19,47 +19,73 @@
     (inputs.flake-utils.lib.eachDefaultSystem (
       system:
       let
+
         pkgs = inputs.nixpkgs.legacyPackages.${system};
-        inherit (pkgs) lib;
+        lib = import ./lib.nix pkgs;
+
+        nixFastBuildContainer = lib.mkBuildContainer {
+          name = "nix-fast-build";
+          tag = with inputs; self.rev or self.dirtyRev or null;
+        };
+
       in
       {
 
         packages = {
-          default = pkgs.dockerTools.buildLayeredImageWithNixDb {
-            name = "nix-fast-build-action";
-            tag = inputs.self.rev or inputs.self.dirtyRev or null;
-            contents = with pkgs; [ bashInteractive ];
-            config = {
-              Cmd = [
-                (lib.getExe pkgs.python3)
-                "-c"
-                "print('Hello from a layered Nix image!')"
-              ];
-            };
-          };
+          inherit nixFastBuildContainer;
+          default = nixFastBuildContainer;
+          example = lib.mkBuildContainer pkgs.spotify;
         };
 
-        apps.default = {
-          type = "app";
-          program = lib.getExe (
-            pkgs.writeShellApplication {
-              name = "ghcr push";
-              text = ''
-                nix build
-                docker load < result
-                name=ghcr.io/$GITHUB_REPOSITORY
-                for tag in $GITHUB_SHA $(git describe --tags --always) latest; do
-                  docker tag ''${GITHUB_REPOSITORY##*/}:$GITHUB_SHA $name:$tag
-                done
-                docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin <<< $GITHUB_TOKEN
-                docker push --all-tags $name
-              '';
-              excludeShellChecks = [
-                "2086" # Double quote to prevent globbing and word splitting
-              ];
-            }
-          );
-        };
+        apps =
+          {
+
+            default = {
+              type = "app";
+              program = lib.getExe (
+                let
+                  inherit (nixFastBuildContainer) imageName imageTag;
+                in
+                pkgs.writeShellApplication {
+                  name = "self-build";
+                  text = ''
+                    nix() {
+                      if command -v nom >/dev/null; then
+                        nom "$@"
+                      else
+                        command nix "$@"
+                      fi
+                    }
+                    nix build .#nixFastBuildContainer
+                    docker load < result
+                    docker tag "${imageName}:${imageTag}" "${imageName}:latest"
+                  '';
+                }
+              );
+            };
+
+            github-action = {
+              type = "app";
+              program = lib.getExe (
+                pkgs.writeShellApplication {
+                  name = "github-action";
+                  text = ''
+                    nix build "$@"
+                    docker load < result
+                    name="ghcr.io/$GITHUB_REPOSITORY"
+                    for tag in "$GITHUB_SHA" "$(git describe --tags --always)" latest; do
+                      docker tag "''${GITHUB_REPOSITORY##*/}:$GITHUB_SHA" "$name:$tag"
+                    done
+                    docker login ghcr.io \
+                      --username "$GITHUB_ACTOR" \
+                      --password-stdin <<< "$GITHUB_TOKEN"
+                    docker push --all-tags "$name"
+                  '';
+                }
+              );
+            };
+
+          };
 
       }
     ));
