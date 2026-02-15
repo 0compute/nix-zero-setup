@@ -5,13 +5,11 @@ let
 
   results = lib.runTests {
     testEnvConfig = {
-      expr = lib.sort (a: b: a < b) (
-        (nixZeroSetupLib.mkBuildContainer {
-          inherit pkgs;
-          inputsFrom = [ pkgs.hello ];
-          nixConf = "extra-features = nix-command";
-        }).config.Env
-      );
+      expr = lib.sort (a: b: a < b) (nixZeroSetupLib.mkBuildContainer {
+        inherit pkgs;
+        inputsFrom = [ pkgs.hello ];
+        nixConf = "extra-features = nix-command";
+      }).config.Env;
       expected = lib.sort (a: b: a < b) [
         "USER=root"
         "NIX_CONFIG=sandbox = false\nbuild-users-group =\nextra-features = nix-command\n"
@@ -65,6 +63,8 @@ let
         nixVersions.latest
         bashInteractive
         cacert
+        coreutils
+        git
         hello
         ripgrep
         jq
@@ -90,6 +90,8 @@ let
         nixVersions.latest
         bashInteractive
         cacert
+        coreutils
+        git
         hello
         jq
       ];
