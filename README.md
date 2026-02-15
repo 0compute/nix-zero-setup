@@ -24,8 +24,9 @@ container.
 
 ### Advantages
 
-1. **Instant Startup**: The environment is ready immediately. No `install-nix-action`,
-   no apt installs, no waiting.
+1. **Instant Azure-Backed Startup**: The environment is ready immediately. Since GHCR
+   and GitHub Actions share the Azure backbone, image pulls are near-instant. No
+   `install-nix-action` or setup tax.
 1. **Strict Reproducibility**: The CI container is built from the same lockfile as your
    project. If it works in the container locally, it works in CI.
 1. **Efficient Caching**: We use `pkgs.dockerTools.buildLayeredImageWithNixDb`. This
@@ -34,10 +35,6 @@ container.
    pulled instantly.
 1. **Hermeticity**: Your build environment is isolated from the host runner. No
    interference from pre-installed GitHub Action tools.
-1. **Azure Backbone Performance**: Since GHCR and GitHub Actions both run on Azure,
-   image pulls happen over the internal high-speed backbone. This means massive
-   bandwidth, zero egress costs, negligible latency, and higher reliability compared to
-   external registries.
 
 ## How It Works
 
