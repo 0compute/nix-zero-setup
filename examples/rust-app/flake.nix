@@ -1,5 +1,5 @@
 {
-  description = "Example Rust project using nix-zero-build";
+  description = "Example Rust project using nix-zero-setup";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
@@ -8,8 +8,8 @@
       url = "github:numtide/flake-utils";
       inputs.systems.follows = "systems";
     };
-    nix-zero-build = {
-      url = "github:your-org/nix-zero-build";
+    nix-zero-setup = {
+      url = "github:your-org/nix-zero-setup";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -30,7 +30,7 @@
           cargoLock.lockFile = ./Cargo.lock;
         };
 
-        packages.build-container = (inputs.nix-zero-build.lib pkgs).mkBuildContainer {
+        packages.build-container = (inputs.nix-zero-setup.lib pkgs).mkBuildContainer {
           name = "rust-build-env";
           contents = with pkgs; [
             cargo

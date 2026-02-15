@@ -1,5 +1,5 @@
 {
-  description = "Example Python ML project using pyproject.nix and nix-zero-build";
+  description = "Example Python ML project using pyproject.nix and nix-zero-setup";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
@@ -12,8 +12,8 @@
       url = "github:nix-community/pyproject.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    nix-zero-build = {
-      url = "github:your-org/nix-zero-build";
+    nix-zero-setup = {
+      url = "github:your-org/nix-zero-setup";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -34,7 +34,7 @@
       {
         packages.default = pythonEnv;
 
-        packages.build-container = (inputs.nix-zero-build.lib pkgs).mkBuildContainer {
+        packages.build-container = (inputs.nix-zero-setup.lib pkgs).mkBuildContainer {
           name = "ml-build-env";
           contents = with pkgs; [
             pythonEnv

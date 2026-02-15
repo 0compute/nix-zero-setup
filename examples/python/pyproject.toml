@@ -1,7 +1,7 @@
 [project]
 name = "strata-ml"
 version = "0.1.0"
-description = "Strata ML: A heavy, layered ML environment example for nix-zero-build"
+description = "Strata ML: A heavy, layered ML environment example for nix-zero-setup"
 dependencies = [
     "torch",
     "numpy",

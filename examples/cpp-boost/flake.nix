@@ -1,5 +1,5 @@
 {
-  description = "Example C++ project using Boost and nix-zero-build";
+  description = "Example C++ project using Boost and nix-zero-setup";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
@@ -8,8 +8,8 @@
       url = "github:numtide/flake-utils";
       inputs.systems.follows = "systems";
     };
-    nix-zero-build = {
-      url = "github:your-org/nix-zero-build";
+    nix-zero-setup = {
+      url = "github:your-org/nix-zero-setup";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -33,7 +33,7 @@
           buildInputs = with pkgs; [ boost ];
         };
 
-        packages.build-container = (inputs.nix-zero-build.lib pkgs).mkBuildContainer {
+        packages.build-container = (inputs.nix-zero-setup.lib pkgs).mkBuildContainer {
           name = "cpp-boost-build-env";
           contents = with pkgs; [
             cmake

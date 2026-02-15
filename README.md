@@ -1,4 +1,4 @@
-# Nix Zero Build
+# Nix Zero Setup
 
 A pattern and toolkit for ultra-fast, reproducible GitHub Actions workflows using
 Nix-built containers.
@@ -58,8 +58,8 @@ Add this flake as an input:
 {
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    nix-zero-build = {
-      url = "github:your-org/nix-zero-build";
+    nix-zero-setup = {
+      url = "github:your-org/nix-zero-setup";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -78,7 +78,7 @@ In your `flake.nix` outputs:
       system:
       let
         pkgs = inputs.nixpkgs.legacyPackages.${system};
-        lib = inputs.nix-zero-build.lib pkgs;
+        lib = inputs.nix-zero-setup.lib pkgs;
       in
       {
         packages.build-container = lib.mkBuildContainer {
