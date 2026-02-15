@@ -1,5 +1,6 @@
 {
   mkBuildContainer =
+    # TODO: follow inputsFrom pattern in pkgs.mkShell
     {
       pkgs,
       drv ? null,
@@ -11,6 +12,8 @@
       ...
     }@args:
     let
+      inherit (pkgs) lib;
+
       contents = [
         nix
       ]
@@ -18,7 +21,7 @@
         bashInteractive # for debug, only adds 4MB
         cacert # for fetchers
       ])
-      ++ pkgs.lib.flatten (
+      ++ lib.flatten (
         map (attr: drv.${attr} or [ ]) [
           "buildInputs"
           "nativeBuildInputs"
@@ -29,12 +32,12 @@
       ++ args.contents or [ ];
 
       config = {
-        Entrypoint = [ (pkgs.lib.getExe nix) ];
-        Env = pkgs.lib.mapAttrsToList (name: value: "${name}=${value}") {
+        Entrypoint = [ (lib.getExe nix) ];
+        Env = lib.mapAttrsToList (name: value: "${name}=${value}") {
           USER = "root";
           # requires "sandbox = false" because unprivileged containers lack the
-          # kernel privileges (unshare for namespaces) required to create it.
-          # we also disable build-users-group because containers often lack them.
+          # kernel privileges (unshare for namespaces) required to create it
+          # we also disable build-users-group because containers often lack them
           NIX_CONFIG = ''
             sandbox = false
             build-users-group =
@@ -46,20 +49,22 @@
       };
 
       image = pkgs.dockerTools.buildLayeredImageWithNixDb (
-        {
-          inherit name contents config;
-
-          # nix needs /tmp to build
-          extraCommands = "mkdir -m 1777 tmp";
-        }
-        // pkgs.lib.removeAttrs args [
+        (lib.removeAttrs args [
           "contents"
+          "config"
           "drv"
           "nix"
           "nixConf"
           "pkgs"
-        ]
+        ])
+        // {
+          inherit name contents config;
+          # nix needs /tmp to build
+          extraCommands = "mkdir -m 1777 tmp";
+        }
       );
     in
+    # expose metadata for unit testing and inspection. buildLayeredImageWithNixDb
+    # does not support passthru or automatically export its internal arguments
     image // { inherit contents config; };
 }

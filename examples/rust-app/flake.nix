@@ -26,7 +26,7 @@
           pname = "rust-app";
           version = "0.1.0";
           src = ./.;
-          # In a real project, this would be a hash or a generated file
+          # in a real project, this would be a hash or a generated file
           cargoLock.lockFile = ./Cargo.lock;
         };
 

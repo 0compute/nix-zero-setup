@@ -19,23 +19,21 @@
   };
 
   outputs =
-    inputs:
-    let
-      lib = import ./lib.nix;
-    in
+    { self, ... }@inputs:
     {
-      inherit lib;
+      lib = import ./lib.nix;
     }
     // (inputs.flake-utils.lib.eachSystem (import inputs.systems) (
       system:
       let
 
         pkgs = inputs.nixpkgs.legacyPackages.${system};
+        inherit (pkgs) lib;
 
-        nixZeroSetupContainer = lib.mkBuildContainer {
+        nixZeroSetupContainer = self.lib.mkBuildContainer {
           inherit pkgs;
           name = "nix-zero-setup";
-          tag = with inputs; self.rev or self.dirtyRev or null;
+          tag = self.rev or self.dirtyRev or null;
         };
 
       in
@@ -44,7 +42,7 @@
         packages = {
           inherit nixZeroSetupContainer;
           default = nixZeroSetupContainer;
-          example = lib.mkBuildContainer {
+          example = self.lib.mkBuildContainer {
             inherit pkgs;
             drv = pkgs.hello;
           };
