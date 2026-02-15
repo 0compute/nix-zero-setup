@@ -24,7 +24,7 @@ container.
 
 ### Advantages
 
-1. **Instant Azure-Backed Startup**: The environment is ready immediately. Since GHCR
+1. **Instant Startup**: The environment is ready immediately. Since GHCR
    and GitHub Actions share the Azure backbone, image pulls are near-instant. No
    `install-nix-action` or setup tax.
 1. **Strict Reproducibility**: The CI container is built from the same lockfile as your
