@@ -1,16 +1,17 @@
 { pkgs }:
 let
-  inherit (pkgs) lib;
   nixZeroSetupLib = import ../lib.nix;
 
-  results = lib.runTests {
+  results = pkgs.lib.runTests {
     testEnvConfig = {
-      expr = lib.sort (a: b: a < b) (nixZeroSetupLib.mkBuildContainer {
-        inherit pkgs;
-        inputsFrom = [ pkgs.hello ];
-        nixConf = "extra-features = nix-command";
-      }).config.Env;
-      expected = lib.sort (a: b: a < b) [
+      expr =
+        pkgs.lib.sort (a: b: a < b)
+          (nixZeroSetupLib.mkBuildContainer {
+            inherit pkgs;
+            inputsFrom = [ pkgs.hello ];
+            nixConf = "extra-features = nix-command";
+          }).config.Env;
+      expected = pkgs.lib.sort (a: b: a < b) [
         "USER=root"
         "NIX_CONFIG=sandbox = false\nbuild-users-group =\nextra-features = nix-command\n"
         "SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
