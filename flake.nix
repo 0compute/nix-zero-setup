@@ -50,9 +50,11 @@
           };
         };
 
-        checks.unit = import ./tests/unit.nix { inherit pkgs; };
-        checks.functional = import ./tests/functional.nix {
-          inherit pkgs nixZeroSetupContainer;
+        checks = {
+          unit = import ./tests/unit.nix { inherit pkgs; };
+          functional = import ./tests/functional.nix {
+            inherit pkgs nixZeroSetupContainer;
+          };
         };
 
         apps = {
@@ -67,7 +69,8 @@
                 name = "self-build";
                 text = ''
                   nix() {
-                    if command -v nom >/dev/null; then
+                    if command -v nom >/dev/null;
+                    then
                       nom "$@"
                     else
                       command nix "$@"
