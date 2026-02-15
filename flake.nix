@@ -11,7 +11,11 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
+    systems.url = "github:nix-systems/default";
+    flake-utils = {
+      url = "github:numtide/flake-utils";
+      inputs.systems.follows = "systems";
+    };
   };
 
   outputs =
@@ -19,7 +23,7 @@
     {
       lib = import ./lib.nix;
     }
-    // (inputs.flake-utils.lib.eachDefaultSystem (
+    // (inputs.flake-utils.lib.eachSystem (import inputs.systems) (
       system:
       let
 
