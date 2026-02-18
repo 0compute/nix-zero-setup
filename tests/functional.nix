@@ -8,7 +8,7 @@ pkgs.testers.runNixOSTest {
     {
       virtualisation = {
         docker.enable = true;
-        memorySize = 2048;
+        memorySize = 4096;
         diskSize = 4096;
       };
       environment.systemPackages = [ pkgs.git ];
@@ -21,12 +21,13 @@ pkgs.testers.runNixOSTest {
         name = "nix-zero-setup";
       };
       tag = with img; "${imageName}:${imageTag}";
+      mkbuildcontainer = pkgs.writeText "mkbuildcontainer.nix" (
+        builtins.readFile ./../mkbuildcontainer.nix
+      );
     in
     builtins.readFile (
       pkgs.replaceVars ./functional.py {
-        inherit img tag;
-        mkbuildcontainer = ./../mkbuildcontainer.nix;
-        pkgs-path = pkgs.path;
+        inherit img tag mkbuildcontainer;
       }
     );
 

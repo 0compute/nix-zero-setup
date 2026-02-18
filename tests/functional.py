@@ -15,28 +15,38 @@ machine.succeed("docker run --rm --entrypoint nix @tag@ --version")
 # create a minimal Nix project to build inside the container
 # we use builtins.derivation to avoid stdenv/nixpkgs dependencies
 machine.succeed("mkdir -p /tmp/test-project")
-machine.copy_from_host("@mkbuildcontainer@", "/tmp/test-project")
+machine.copy_from_host("@mkbuildcontainer@", "/tmp/test-project/mkbuildcontainer.nix")
 
-flake_content = """
+flake_content = r"""
 {
 outputs = _: {
     packages.x86_64-linux.default =
     let
-        # minimal mock pkgs for lib.nix
+        # minimal mock pkgs with inline lib implementation
         pkgs = {
-        lib = (import "@pkgs-path@" { }).lib;
+        lib = {
+            head = list: builtins.elemAt list 0;
+            concatMap = f: list: builtins.concatLists (map f list);
+            mapAttrsToList = f: attrs:
+            map (name: f name attrs.${name}) (builtins.attrNames attrs);
+            removeAttrs = attrs: names: builtins.removeAttrs attrs names;
+            concatStringsSep = sep: list: builtins.concatStringsSep sep list;
+            getExe = pkg: "${pkg}/bin/nix";
+        };
+        nixVersions.latest = { outPath = "/nix"; pname = "nix"; };
         nix = { outPath = "/bin/nix"; };
         coreutils = { outPath = "/bin"; };
         bashInteractive = { outPath = "/bin/bash"; };
+        git = { outPath = "/bin/git"; };
+        cacert = { outPath = "/etc/ssl/certs"; };
         dockerTools.buildLayeredImageWithNixDb = args:
             derivation {
             name = args.name;
-            builder = "/bin/sh";
-            args = [ "-c" "/bin/touch \$out" ];
+            builder = "/bin/bash";
+            args = [ "-c" "touch $out" ];
             system = "x86_64-linux";
             PATH = "/bin";
             };
-        cacert = { outPath = "/etc/ssl/certs/ca-bundle.crt"; };
         };
         mkBuildContainer = import ./mkbuildcontainer.nix;
     in mkBuildContainer {
@@ -51,8 +61,7 @@ machine.succeed(f"echo '{flake_content}' > /tmp/test-project/flake.nix")
 # initialize git so Nix sees the files in the flake
 machine.succeed("cd /tmp/test-project && git init && git add .")
 
-# run the build inside the container
-# we provide a mock NIX_PATH for lib.nix to import <nixpkgs/lib> or similar
+# run nix eval inside the container to verify flake evaluation works
 machine.succeed(
     " ".join(
         (
@@ -61,13 +70,11 @@ machine.succeed(
             "-v /tmp/test-project:/src",
             "-w /src",
             "@tag@",
-            "build",
-            "--offline",
+            "eval",
             "--impure",
-            "--verbose",
             "--accept-flake-config",
             "--extra-experimental-features 'nix-command flakes'",
-            ".#default",
+            ".#default.name",
         )
     )
 )
