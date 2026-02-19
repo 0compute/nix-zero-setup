@@ -64,7 +64,8 @@ let
         bashInteractive
         cacert
         coreutils
-        git
+        gitMinimal
+        nodejs
         hello
         ripgrep
         jq
@@ -91,7 +92,8 @@ let
         bashInteractive
         cacert
         coreutils
-        git
+        gitMinimal
+        nodejs
         hello
         jq
       ];

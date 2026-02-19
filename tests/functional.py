@@ -1,3 +1,4 @@
+# functional test
 machine.wait_for_unit("docker.service")
 machine.succeed("docker load < @img@")
 

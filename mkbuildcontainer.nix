@@ -1,5 +1,6 @@
 {
   pkgs,
+  flake ? null,
   inputsFrom ? [ ],
   name ? (
     if inputsFrom != [ ] then
@@ -17,15 +18,32 @@
   ...
 }@args:
 let
-  extractedInputs = pkgs.lib.concatMap (
+  inherit (pkgs) lib;
+  system = pkgs.stdenv.hostPlatform.system;
+
+  # Extract derivations from flake outputs (packages, checks, apps)
+  flakeDerivations =
+    if flake == null then
+      [ ]
+    else
+      let
+        getDerivations = attr: lib.attrValues (flake.${attr}.${system} or { });
+        # Apps have { type = "app"; program = "..."; } - extract if there's a package attr
+        getApps = lib.filter lib.isDerivation (
+          map (app: app.package or null) (lib.attrValues (flake.apps.${system} or { }))
+        );
+      in
+      getDerivations "packages" ++ getDerivations "checks" ++ getApps;
+
+  extractedInputs = lib.concatMap (
     d:
-    pkgs.lib.concatMap (attr: d.${attr} or [ ]) [
+    lib.concatMap (attr: d.${attr} or [ ]) [
       "buildInputs"
       "nativeBuildInputs"
       "propagatedBuildInputs"
       "propagatedNativeBuildInputs"
     ]
-  ) inputsFrom;
+  ) (inputsFrom ++ flakeDerivations);
 
   contents = [
     nix
@@ -41,8 +59,8 @@ let
   ++ args.contents or [ ];
 
   config = {
-    Entrypoint = [ (pkgs.lib.getExe nix) ];
-    Env = pkgs.lib.mapAttrsToList (name: value: "${name}=${value}") {
+    Entrypoint = [ (lib.getExe nix) ];
+    Env = lib.mapAttrsToList (name: value: "${name}=${value}") {
       USER = "root";
       # requires "sandbox = false" because unprivileged containers lack the
       # kernel privileges (unshare for namespaces) required to create it
@@ -58,9 +76,10 @@ let
   };
 
   image = pkgs.dockerTools.buildLayeredImageWithNixDb (
-    (pkgs.lib.removeAttrs args [
+    (lib.removeAttrs args [
       "contents"
       "config"
+      "flake"
       "inputsFrom"
       "nix"
       "nixConf"
@@ -72,7 +91,7 @@ let
       extraCommands = ''
         mkdir -m 1777 tmp
         mkdir -p bin
-        for c in ${pkgs.lib.concatStringsSep " " contents}; do
+        for c in ${lib.concatStringsSep " " contents}; do
           if [ -d "$c/bin" ]; then
             ln -s "$c"/bin/* bin/ || true
           fi
