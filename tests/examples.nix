@@ -14,7 +14,7 @@ let
   examplesDir = ../examples;
 
   exampleNames = builtins.attrNames (
-    lib.filterAttrs (_: type: type == "directory") (builtins.readDir examplesDir)
+    lib.filterAttrs (_name: type: type == "directory") (builtins.readDir examplesDir)
   );
 
   buildExample = name:

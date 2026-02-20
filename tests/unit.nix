@@ -4,13 +4,13 @@ let
   results = pkgs.lib.runTests {
     testEnvConfig = {
       expr =
-        pkgs.lib.sort (a: b: a < b)
+        pkgs.lib.sort (left: right: left < right)
           (mkBuildContainer {
             inherit pkgs;
             inputsFrom = [ pkgs.hello ];
             nixConf = "extra-features = nix-command";
           }).config.Env;
-      expected = pkgs.lib.sort (a: b: a < b) [
+      expected = pkgs.lib.sort (left: right: left < right) [
         "USER=root"
         "NIX_CONFIG=sandbox = false\nbuild-users-group =\nextra-features = nix-command\n"
         "SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"

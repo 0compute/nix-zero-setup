@@ -30,7 +30,7 @@
           inherit pkgs name;
           flake = inputs.self;
           # Exclude container itself to avoid circular dependency
-          flakeFilter = d: !pkgs.lib.hasPrefix name (d.name or "");
+          flakeFilter = drv: !pkgs.lib.hasPrefix name (drv.name or "");
           tag = inputs.self.rev or inputs.self.dirtyRev or null;
         };
 

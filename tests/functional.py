@@ -1,4 +1,5 @@
-# functional test
+# Functional test for nix-zero-setup container
+# Validates that the container can run Nix commands and evaluate flakes
 machine.wait_for_unit("docker.service")
 machine.succeed("docker load < @img@")
 
@@ -30,3 +31,4 @@ machine.succeed(
         )
     )
 )
+

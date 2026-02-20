@@ -1,7 +1,7 @@
 {
   pkgs,
   flake ? null,
-  flakeFilter ? (_: true),
+  flakeFilter ? (_drv: true),
   inputsFrom ? [ ],
   name ? (
     if inputsFrom != [ ] then
@@ -40,8 +40,8 @@ let
       );
 
   extractedInputs = lib.concatMap (
-    d:
-    lib.concatMap (attr: d.${attr} or [ ]) [
+    drv:
+    lib.concatMap (attr: drv.${attr} or [ ]) [
       "buildInputs"
       "nativeBuildInputs"
       "propagatedBuildInputs"
@@ -94,11 +94,11 @@ let
       inherit name contents config;
       # nix needs /tmp to build. we also create a standard /bin env
       extraCommands = ''
-        mkdir -m 1777 tmp
-        mkdir -p bin
-        for c in ${lib.concatStringsSep " " contents}; do
-          if [ -d "$c/bin" ]; then
-            ln -s "$c"/bin/* bin/ || true
+        mkdir --mode=1777 tmp
+        mkdir --parents bin
+        for pkg in ${lib.concatStringsSep " " contents}; do
+          if [ -d "$pkg/bin" ]; then
+            ln --symbolic "$pkg"/bin/* bin/ || true
           fi
         done
       '';
