@@ -95,7 +95,7 @@ let
   config = lib.recursiveUpdate {
     Entrypoint = [ (lib.getExe nix) ];
     Env = lib.mapAttrsToList (name: value: "${name}=${value}") {
-      HOME = "/root";
+      HOME = "/tmp";
       USER = "root";
       GIT_TEXTDOMAINDIR = "${pkgs.git}/share/locale";
       GIT_INTERNAL_GETTEXT_TEST_FALLBACKS = "";

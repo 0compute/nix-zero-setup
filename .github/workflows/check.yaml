@@ -16,7 +16,7 @@ on:
 env:
   # errexit and pipefail set by the runner
   SHELLOPTS: ""
-  HOME: /root
+  HOME: /tmp
 
 jobs:
   check:
