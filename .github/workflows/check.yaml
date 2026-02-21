@@ -24,4 +24,6 @@ jobs:
     container: ghcr.io/${{ github.repository }}:latest
     steps:
       - uses: actions/checkout@v6
+      - run: |-
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: nix flake check --print-build-logs
