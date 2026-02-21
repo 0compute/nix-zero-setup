@@ -5,6 +5,8 @@ on:
     paths: &paths
       - flake.lock
       - flake.nix
+      - mkbuildcontainer.nix
+      - .github/workflows/build-container.yaml
   pull_request:
     paths: *paths
 
