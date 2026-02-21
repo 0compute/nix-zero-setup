@@ -12,6 +12,7 @@ let
           }).config.Env;
       expected = pkgs.lib.sort (left: right: left < right) [
         "USER=root"
+        "GIT_TEXTDOMAINDIR=${pkgs.git}/share/locale"
         (
           "NIX_CONFIG="
           + "sandbox = false\n"
