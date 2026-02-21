@@ -13,6 +13,7 @@ let
       expected = pkgs.lib.sort (left: right: left < right) [
         "USER=root"
         "GIT_TEXTDOMAINDIR=${pkgs.git}/share/locale"
+        "GIT_INTERNAL_GETTEXT_TEST_FALLBACKS="
         (
           "NIX_CONFIG="
           + "sandbox = false\n"

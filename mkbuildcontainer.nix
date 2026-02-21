@@ -97,6 +97,7 @@ let
     Env = lib.mapAttrsToList (name: value: "${name}=${value}") {
       USER = "root";
       GIT_TEXTDOMAINDIR = "${pkgs.git}/share/locale";
+      GIT_INTERNAL_GETTEXT_TEST_FALLBACKS = "";
       # requires "sandbox = false" because unprivileged containers lack the
       # kernel privileges (unshare for namespaces) required to create it
       # we also disable build-users-group because containers often lack them
