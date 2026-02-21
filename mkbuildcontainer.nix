@@ -124,6 +124,13 @@ let
         nodeDir=$externals/node${lib.versions.major pkgs.nodejs.version}
         mkdir --parents $nodeDir/bin
         ln --symbolic ${lib.getExe pkgs.nodejs} $nodeDir/bin/node
+        libc=${pkgs.glibc}/lib/libc.so.6
+        libstdcpp=${pkgs.stdenv.cc.cc.lib}/lib/libstdc++.so.6
+        # Actions runtime expects glibc libs at the multiarch path.
+        multiarchDir=lib/${pkgs.stdenv.hostPlatform.linuxArch}-linux-gnu
+        mkdir --parents $multiarchDir
+        ln --symbolic $libc $multiarchDir/libc.so.6
+        ln --symbolic $libstdcpp $multiarchDir/libstdc++.so.6
       '';
     }
   );
