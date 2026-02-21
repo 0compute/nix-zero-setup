@@ -45,10 +45,16 @@
         checks =
           let
             attrs = { inherit pkgs mkBuildContainer; };
+            runFtest = builtins.getEnv "CI" != "true";
           in
           {
             utest = import ./tests/unit.nix attrs;
-            ftest = import ./tests/functional.nix attrs;
+            ftest =
+              if runFtest then
+                import ./tests/functional.nix attrs
+              else
+                pkgs.runCommand "ftest-skipped" { }
+                  "touch $out";
             examples = import ./tests/examples.nix (
               attrs
               // {

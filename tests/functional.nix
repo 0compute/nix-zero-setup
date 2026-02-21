@@ -24,7 +24,9 @@ pkgs.testers.runNixOSTest {
       mkbuildcontainer = pkgs.writeText "mkbuildcontainer.nix" (
         builtins.readFile ./../mkbuildcontainer.nix
       );
-      testflake = pkgs.writeText "flake.nix" (builtins.readFile ./functional-flake.nix);
+      testflake = pkgs.writeText "flake.nix" (
+        builtins.readFile ./functional-flake.nix
+      );
     in
     builtins.readFile (
       pkgs.replaceVars ./functional.py {
