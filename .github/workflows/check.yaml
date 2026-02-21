@@ -15,6 +15,7 @@ on:
 
 env:
   # errexit and pipefail set by the runner
+  CI: "true"
   SHELLOPTS: ""
   HOME: /tmp
 
@@ -26,4 +27,4 @@ jobs:
       - uses: actions/checkout@v6
       - run: |-
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      - run: nix flake check --print-build-logs
+      - run: nix flake check --print-build-logs --impure
