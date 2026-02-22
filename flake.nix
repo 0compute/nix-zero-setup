@@ -46,13 +46,6 @@
       apps =
         pkgs:
         let
-          inherit (pkgs)
-            docker
-            coreutils
-            jq
-            oras
-            skopeo
-            ;
           inherit (inputs) self;
           name = "nix-seed";
           seed = mkSeed {
@@ -62,16 +55,9 @@
             tag = self.rev or self.dirtyRev or null;
           };
           tools = {
-            seedLoad = pkgs.writeShellApplication {
-              name = "seed-load";
-              runtimeInputs = [ docker ];
-              text = ''
-                ${lib.getExe docker} load < ${seed}
-              '';
-            };
             verify = pkgs.writeShellApplication {
               name = "verify";
-              runtimeInputs = [
+              runtimeInputs = with pkgs; [
                 coreutils
                 jq
                 oras
@@ -81,10 +67,10 @@
             };
             publish = pkgs.writeShellApplication {
               name = "publish";
-              runtimeInputs = [ docker ];
+              runtimeInputs = with pkgs; [ docker ];
               text = ''
-                ${lib.getExe pkgs.nix} build .#seed
-                ${lib.getExe docker} load < result
+                nix build .#seed
+                docker load < result
               '';
             };
           };
@@ -107,52 +93,25 @@
       packages =
         pkgs:
         let
-          inherit (pkgs)
-            lib
-            docker
-            coreutils
-            jq
-            oras
-            skopeo
-            ;
           inherit (inputs) self;
           name = "nix-seed";
           seed = mkSeed {
-            inherit pkgs name;
-            inherit self;
+            inherit name pkgs self;
+            # filter self from seed otherwise this is circular
+            # CHECK: needs the or?
             selfFilter = drv: !lib.hasPrefix name (drv.name or "");
+            # no rev when using `nix build path:.`
             tag = self.rev or self.dirtyRev or null;
-          };
-          tools = {
-            seedLoad = pkgs.writeShellApplication {
-              name = "seed-load";
-              runtimeInputs = [ docker ];
-              text = ''
-                ${lib.getExe docker} load < ${seed}
-              '';
-            };
-            verify = pkgs.writeShellApplication {
-              name = "verify";
-              runtimeInputs = [
-                coreutils
-                jq
-                oras
-                skopeo
-              ];
-              text = builtins.readFile ./bin/verify;
-            };
           };
         in
         {
-          inherit seed;
           default = seed;
-          inherit (tools) seedLoad verify;
+          inherit seed;
         };
 
       checks =
         pkgs:
         let
-          inherit (pkgs.stdenv.hostPlatform) system;
           attrs = { inherit pkgs mkSeed; };
           runFtest = builtins.getEnv "CI" != "true";
           suites = {
@@ -171,11 +130,7 @@
               touch $out
             '';
             examples = import ./tests/examples.nix (
-              attrs
-              // {
-                inherit system;
-                inherit (inputs) flake-utils pyproject-nix;
-              }
+              attrs // { inherit (inputs) flake-utils pyproject-nix; }
             );
           };
         in
