@@ -162,6 +162,14 @@
                 import ./tests/functional.nix attrs
               else
                 pkgs.runCommand "ftest-skipped" { } "touch $out";
+            bats = pkgs.runCommand "bats-tests" {
+              nativeBuildInputs = with pkgs; [ bats ];
+              src = ./.;
+            } ''
+              cd "$src"
+              ${lib.getExe pkgs.bats} tests/bin
+              touch $out
+            '';
             examples = import ./tests/examples.nix (
               attrs
               // {
