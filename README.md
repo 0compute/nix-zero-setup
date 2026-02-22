@@ -294,21 +294,21 @@ Use `--dry-run` with `./bin/verify` to verify without attaching.
 Note: [`mkseed.nix`](./mkseed.nix) prepends `${./bin}` to PATH inside seeds so
 helpers like [`bin/verify`](./bin/verify) are available in built images.
 
-Multi-arch: attach per-arch attestations before composing a manifest list so each
-platform entry carries its own attestation; consumers pull the manifest, and runtimes
-fetch the matching platform layers automatically.
+Multi-arch: attach per-arch attestations before composing a manifest list so each platform
+entry carries its own attestation; consumers pull the manifest, and runtimes fetch the
+matching platform layers automatically.
 
 Flake package `verify` (resholve via `writeShellApplication`) is available with
 `nix build .#verify` for pinned, dependency-resolved usage.
 
-For highest assurance, combine n-of-m attestations with a full-source bootstrap chain
-for compilers and critical tools, then cross-verify hashes from independent builders
-before promotion.
+For highest assurance, combine n-of-m attestations with a full-source bootstrap chain for
+compilers and critical tools, then cross-verify hashes from independent builders before
+promotion.
 
-Full-source bootstraps are achievable but non-trivial: see Guix and bootstrappable
-builds (mes, stage0, tinycc) for minimal binary seeds and documented compiler chains.
-Expect extra effort to align toolchains, trim seeds, and verify each stage across
-independent builders.
+Full-source bootstraps are achievable but non-trivial: see Guix and bootstrappable builds
+(mes, stage0, tinycc) for minimal binary seeds and documented compiler chains. Expect
+extra effort to align toolchains, trim seeds, and verify each stage across independent
+builders.
 
 ### Zero-Trust Attestation Flow
 
