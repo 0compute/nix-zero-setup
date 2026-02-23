@@ -53,6 +53,8 @@ runs:
       env:
         DOCKER_USER: ${{ github.actor }}
         DOCKER_TOKEN: ${{ inputs.registry_token }}
+        # enable keyless signing so sign-in uses existing runner credentials rather than device flow
+        COSIGN_EXPERIMENTAL: "1"
       shell: bash
       run: |-
         set -euo pipefail
