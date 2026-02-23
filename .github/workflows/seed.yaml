@@ -2,17 +2,10 @@ name: Seed
 
 on:
   push:
-    # XXX: this must match `paths-ignore` in ./check.yaml
-    paths: &paths
-      - flake.lock
-      - flake.nix
-      - mkseed.nix
-      - .github/workflows/seed.yaml
   pull_request:
-    paths: *paths
-  workflow_dispatch:
 
 jobs:
+
   seed:
     runs-on: ubuntu-latest
     permissions:
@@ -31,4 +24,13 @@ jobs:
         uses: ./.
         with:
           registry_token: ${{ secrets.GITHUB_TOKEN }}
+          # TODO: tag should be done by after check
           tags: latest
+
+  check:
+    runs-on: ubuntu-latest
+    container: ghcr.io/${{ github.repository }}:${{ github.sha }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - uses: actions/checkout@v6
+      - run: nix flake check --print-build-logs
