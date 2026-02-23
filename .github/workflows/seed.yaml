@@ -5,10 +5,10 @@ on:
     paths: &paths
       - flake.lock
       - flake.nix
-      - mkseed.nix
       - .github/workflows/seed.yaml
   pull_request:
     paths: *paths
+  workflow_dispatch:
 
 jobs:
   build:
