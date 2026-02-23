@@ -34,7 +34,6 @@
           seed = inputs.nix-seed.lib.mkSeed {
             inherit pkgs;
             name = "ml-build-env";
-            inputsFrom = [ pythonEnv ];
             contents = with pkgs; [ hatch ];
           };
         };

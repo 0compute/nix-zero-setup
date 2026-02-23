@@ -2,14 +2,13 @@
 let
 
   results = pkgs.lib.runTests {
-    testEnvConfig = {
-      expr =
-        pkgs.lib.sort (left: right: left < right)
-          (mkSeed {
-            inherit pkgs;
-            inputsFrom = [ pkgs.hello ];
-            nixConf = "extra-features = nix-command";
-          }).config.Env;
+  testEnvConfig = {
+    expr =
+      pkgs.lib.sort (left: right: left < right)
+        (mkSeed {
+          inherit pkgs;
+          nixConf = "extra-features = nix-command";
+        }).config.Env;
       expected = pkgs.lib.sort (left: right: left < right) [
         "USER=root"
         "GIT_TEXTDOMAINDIR=${pkgs.git}/share/locale"
@@ -36,14 +35,13 @@ let
       ];
     };
 
-    testDefaultName = {
-      expr =
-        (mkSeed {
-          inherit pkgs;
-          inputsFrom = [ pkgs.hello ];
-        }).name;
-      expected = "hello-seed.tar.gz";
-    };
+  testDefaultName = {
+    expr =
+      (mkSeed {
+        inherit pkgs;
+      }).name;
+    expected = "unnamed-seed.tar.gz";
+  };
 
     testCustomName = {
       expr =
@@ -54,48 +52,10 @@ let
       expected = "custom.tar.gz";
     };
 
-    testInputsFromMerging =
-      let
-        drv1 = pkgs.stdenv.mkDerivation {
-          pname = "test1";
-          version = "1.0";
-          buildInputs = with pkgs; [ hello ];
-        };
-        drv2 = pkgs.stdenv.mkDerivation {
-          pname = "test2";
-          version = "1.0";
-          nativeBuildInputs = with pkgs; [ ripgrep ];
-        };
-        seed = mkSeed {
-          inherit pkgs;
-          inputsFrom = [
-            drv1
-            drv2
-          ];
-          contents = with pkgs; [ jq ];
-        };
-      in
-      {
-        expr = seed.contents;
-        expected =
-          seed.corePkgs
-          ++ (with pkgs; [
-            hello
-            ripgrep
-            jq
-          ]);
-      };
-
     testContentsMerging =
       let
-        drv = pkgs.stdenv.mkDerivation {
-          pname = "test";
-          version = "1.0";
-          buildInputs = with pkgs; [ hello ];
-        };
         seed = mkSeed {
           inherit pkgs;
-          inputsFrom = [ drv ];
           contents = with pkgs; [ jq ];
         };
       in
@@ -104,7 +64,6 @@ let
         expected =
           seed.corePkgs
           ++ (with pkgs; [
-            hello
             jq
           ]);
       };

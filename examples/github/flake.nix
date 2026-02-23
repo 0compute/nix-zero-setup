@@ -17,7 +17,6 @@
           inputs.nix-seed.lib.mkSeed {
             inherit pkgs;
             name = "github-example-seed";
-            inputsFrom = [ examplePkg ];
           };
       in
       {

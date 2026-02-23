@@ -50,7 +50,6 @@
       mkSeed {
         inherit pkgs;
         name = "test-seed";
-        inputsFrom = [ pkgs.coreutils ];
       };
   };
 }

@@ -50,27 +50,37 @@
 
       apps = pkgs: {
 
-        publish-seed = {
+        publish = {
           type = "app";
-          program = pkgs.writeShellApplication {
-            name = "publish";
-            runtimeInputs = with pkgs; [ docker ];
-            text = builtins.readFile ./bin/publish-seed;
-          };
+          program = lib.getExe (
+            pkgs.writeShellApplication {
+              name = "publish";
+              runtimeInputs = with pkgs; [
+                docker
+                gnutar
+                gzip
+                jq
+                cosign
+              ];
+              text = builtins.readFile ./bin/publish;
+            }
+          );
         };
 
         verify = {
           type = "app";
-          program = pkgs.writeShellApplication {
-            name = "verify";
-            runtimeInputs = with pkgs; [
-              coreutils
-              jq
-              oras
-              skopeo
-            ];
-            text = builtins.readFile ./bin/verify;
-          };
+          program = lib.getExe (
+            pkgs.writeShellApplication {
+              name = "verify";
+              runtimeInputs = with pkgs; [
+                coreutils
+                jq
+                oras
+                skopeo
+              ];
+              text = builtins.readFile ./bin/verify;
+            }
+          );
         };
       };
 

@@ -30,7 +30,6 @@
           seed = inputs.nix-seed.lib.mkSeed {
             inherit pkgs;
             name = "rust-build-env";
-            inputsFrom = [ default ];
             contents = with pkgs; [
               rust-analyzer
               clippy

@@ -33,7 +33,6 @@
           seed = inputs.nix-seed.lib.mkSeed {
             inherit pkgs;
             name = "cpp-boost-build-env";
-            inputsFrom = [ default ];
             contents = with pkgs; [ gcc ];
           };
         };
