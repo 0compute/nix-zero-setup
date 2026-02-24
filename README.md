@@ -52,8 +52,6 @@ Promotion is gated by an n-of-m quorum of Rekor entries.
 
 See [publish](./bin/publish) for full details.
 
-This is endgame for supply chain security.
-
 ### Endgame (TODO)
 
 While an n-of-m quorum makes lying difficult, it still relies on a centralized actor
