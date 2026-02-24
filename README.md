@@ -1,14 +1,10 @@
 # Nix Seed
 
-> Trusting trust is a bug. Nix Seed is the patch.
-
 Nix Seed provides high-performance/high-integrity containerized Nix build environments.
 
-| Line Item                         | Cost      |
-| ---                               | ---       |
-| 🧘 **Recovered Engineering Flow** | -$$$      |
-| ☁️ **Reclaimed Build Minutes**    | -$$$      |
-| 🔐 **Supply Chain Integrity**     | Priceless |
+- 🧠 Recovered Engineering Flow: $$$
+- ☁️ Reclaimed Build Minutes: $$$
+- ⛓️ A Build You Can Trust: **Priceless**
 
 ## Problem: Purity Ain't Free
 
@@ -41,15 +37,12 @@ possibility.
 ## Solution: Trust No Fucker
 
 1. Post build, generate a JSON predicate containing:
-
-- commit: git sha
-- system: `stdenv.hostPlatform.system` i.e. `x86_64-linux` or `aarch64-darwin`
-- narHash: nar hash of the built image
-- builder identity: who performed the build
-
+   - commit: git sha
+   - system: `stdenv.hostPlatform.system` i.e. `x86_64-linux` or `aarch64-darwin`
+   - narHash: nar hash of the built image
+   - builder identity: who performed the build
 1. Sign the predicate and pushes to the registry as an OCI artifact attached to the
    image, then log it to [Rekor](https://rekor.dev/).
-
 1. Promotion is gated by an n-of-m quorum of Rekor entries.
 
 See [publish](./bin/publish) for full detail.
@@ -57,7 +50,7 @@ See [publish](./bin/publish) for full detail.
 ### Endgame (TODO)
 
 An n-of-m quorum still relies on a centralized actor (like GitHub Actions) to enforce
-the gate and update registry tags. The endgame moves this from a "log" to a **truth
+the gate and update registry tags. Endgame moves this from a "log" to a **truth
 machine** by anchoring a Merkle root of all system attestations to an Ethereum L2 (e.g.,
 Base or Arbitrum).
 
