@@ -4,9 +4,11 @@
 
 Nix Seed provides high-performance/high-integrity containerized Nix build environments.
 
-- 🧘 **Recovered Engineering Flow**: $$$
-- ☁️ **Reclaimed Build Minutes**: $$$
-- 🔐 **Supply Chain Integrity**: Priceless
+| Line Item                         | Cost      |
+| :---                              | ---:      |
+| 🧘 **Recovered Engineering Flow** | $$$       |
+| ☁️ **Reclaimed Build Minutes**    | $$$       |
+| 🔐 **Supply Chain Integrity**     | Priceless |
 
 ## Problem: Purity Ain't Free
 
