@@ -6,9 +6,6 @@ container.
 
 Result: time-to-build is near-instant.
 
-![XKCD Compiling](https://imgs.xkcd.com/comics/compiling.png "Not any more,
-fuckers. Get back to work!")
-
 ## Problem: Purity Ain't Free
 
 Nix is not well suited to non-native ephemeral environments. CI runners must install
@@ -90,3 +87,8 @@ cold-start overhead for cache hits.
 
 Nix Seed is unimpeachable. Upstream license terms for non-redistributable SDKs are fully
 respected, leaving zero surface area for litigation.
+
+______________________________________________________________________
+
+![XKCD Compiling](https://imgs.xkcd.com/comics/compiling.png "Not any more,
+fuckers. Get back to work!")
