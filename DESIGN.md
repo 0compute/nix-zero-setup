@@ -110,15 +110,15 @@ truth.
 
 Nixpkgs has this protection. The chain builds through:
 
-- **Stage0.** The initial binary is
+- The initial binary is
   [stage0-posix](https://github.com/oriansj/stage0-posix): a self-hosting
   assembler whose bootstrap binary is a few hundred bytes of hex-encoded machine
   instructions. There is no opaque compiler binary to trust.
-  - [GNU Mes](https://www.gnu.org/software/mes/) - a minimal C compiler and
-    Scheme interpreter bootstrapped entirely from the assembler
-  - [tcc](https://bellard.org/tcc/)
-  - [gcc](https://gcc.gnu.org/) =
-    [live-bootstrap](https://github.com/fosslinux/live-bootstrap).
+- [GNU Mes](https://www.gnu.org/software/mes/) - a minimal C compiler and
+Scheme interpreter bootstrapped entirely from the assembler
+- [tcc](https://bellard.org/tcc/)
+- [gcc](https://gcc.gnu.org/)
+- [live-bootstrap](https://github.com/fosslinux/live-bootstrap).
 
 The entire chain is coordinated with
 [bootstrappable.org](https://bootstrappable.org/).
