@@ -523,9 +523,9 @@ orchestration code.
 
 ## Threat Actors
 
-### US .gov
+### USA .gov
 
-`US .gov` has hegemony over the global internet: ICANN controls domain name
+`USA .gov` has hegemony over the global internet: ICANN controls domain name
 resolution and root DNS; the majority of root certificate authorities are
 US-headquartered; BGP[^bgp] routing registries are US-operated; and every major
 cloud provider, CDN, software distribution platform, and CI service is either
