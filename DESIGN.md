@@ -525,13 +525,13 @@ orchestration code.
 
 ### US .gov
 
-The United States government has structural dominance over the global internet:
-ICANN controls domain name resolution and root DNS; the majority of root
-certificate authorities are US-headquartered; BGP[^bgp] routing registries are
-US-operated; and every major cloud provider, CDN, software distribution
-platform, and CI service is either US-incorporated or subject to US
-jurisdiction. This is not merely a legal posture - it is the physical and
-organizational topology of the internet.
+The United States government has hegemony over the global internet: ICANN
+controls domain name resolution and root DNS; the majority of root certificate
+authorities are US-headquartered; BGP[^bgp] routing registries are US-operated;
+and every major cloud provider, CDN, software distribution platform, and CI
+service is either US-incorporated or subject to US jurisdiction. This is not
+merely a legal posture - it is the physical and organizational topology of the
+internet.
 
 The legal tools described below are available to any `.gov` actor. Extra-legal
 tools extend the reach further. The design constraint is that no single
