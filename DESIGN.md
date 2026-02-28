@@ -2,23 +2,23 @@
 
 <!--toc:start-->
 - [Architecture](#architecture)
-- [Performance](#performance)
-  - [Constraints](#constraints)
-  - [Instrumentation](#instrumentation)
-  - [Comparisons](#comparisons)
-- [Seed Construction](#seed-construction)
-  - [Non-Container Results](#non-container-results)
-- [Trust](#trust)
-  - [Bootstrap Chain](#bootstrap-chain)
-  - [Quorum](#quorum)
-  - [Modes](#modes)
-  - [Development](#development)
-  - [Production](#production)
-    - [Genesis](#genesis)
-    - [L2 Gas Costs](#l2-gas-costs)
-    - [Governance Constraints](#governance-constraints)
-  - [Implicit Trust Boundary](#implicit-trust-boundary)
-- [Project Attack Surface](#project-attack-surface)
+  - [Performance](#performance)
+    - [Constraints](#constraints)
+    - [Instrumentation](#instrumentation)
+    - [Comparisons](#comparisons)
+  - [Seed Construction](#seed-construction)
+    - [Non-Container Results](#non-container-results)
+  - [Trust](#trust)
+    - [Bootstrap Chain](#bootstrap-chain)
+    - [Quorum](#quorum)
+    - [Modes](#modes)
+    - [Development](#development)
+    - [Production](#production)
+      - [Genesis](#genesis)
+      - [L2 Gas Costs](#l2-gas-costs)
+      - [Governance Constraints](#governance-constraints)
+    - [Implicit Trust Boundary](#implicit-trust-boundary)
+  - [Project Attack Surface](#project-attack-surface)
 - [Threat Actors](#threat-actors)
   - [USA .gov](#usa-gov)
     - [Legal](#legal)
@@ -527,7 +527,7 @@ orchestration code.
 
 ### USA .gov
 
-`USA .gov` has hegemony over the global internet: ICANN controls domain name
+`USA .gov` holds hegemony over the global internet: ICANN controls domain name
 resolution and root DNS; the majority of root certificate authorities are
 US-headquartered; BGP[^bgp] routing registries are US-operated; and every major
 cloud provider, CDN, software distribution platform, and CI service is either
@@ -636,7 +636,7 @@ detectable, attributable, and expensive.
 
 ______________________________________________________________________
 
-### Other 
+### Other
 
 | Actor | Org | Capability | Mode at risk |
 | --- | --- | --- | --- |
@@ -646,6 +646,14 @@ ______________________________________________________________________
 | Iran | IRGC / APT33-APT35 | Spear phishing | Dev |
 | Israel | Unit 8200 / NSO Group | Zero-day, implants | All |
 | Criminal | Ransomware, insider threat | Credential theft | Dev |
+
+The [xz-utils backdoor (2024)](https://tukaani.org/xz-backdoor/) demonstrated
+that a patient attacker can socially engineer maintainer trust.
+
+HUMINT recruitment of build-system maintainers is not addressed by any technical
+control. Key ceremony discipline and HSM-resident keys limit insider blast
+radius: an insider can attest a bad build, but cannot retroactively forge the
+quorum.
 
 #### China
 
@@ -659,11 +667,6 @@ PLA Unit 61398 and MSS-linked groups (APT10, APT41) have demonstrated sustained
 supply-chain targeting, including software-update hijacking and build-server
 compromise. The Production mode design raises the cost by requiring simultaneous
 across N independent builder networks.
-
-HUMINT recruitment of build-system maintainers is not addressed by any technical
-control. Key ceremony discipline and HSM-resident keys limit insider blast
-radius: an insider can attest a bad build, but cannot retroactively forge the
-quorum.
 
 #### Russia
 
@@ -680,12 +683,7 @@ passive interception regardless of TLS[^tls]. Reproducible builds mean an
 observer who intercepts a build gets the same artifact but cannot inject code
 without breaking the digest.
 
-### Controls
-
-The [xz-utils backdoor (2024)](https://tukaani.org/xz-backdoor/) demonstrated
-that a patient attacker can socially engineer maintainer trust over years.
-
-Controls:
+## Controls
 
 - **Quorum over commits**: if any one builder's reproducible build diverges, the
   build fails.
