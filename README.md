@@ -1,17 +1,23 @@
 # Nix Seed
 
-Nix Seed provides OCI seed images for Nix-built projects, packaging their
-dependency closure as content-addressed OCI layers to eliminate per-job
-reconstruction of `/nix/store`.
+Nix Seed drastically speeds up CI[^ci] for Nix-based projects on non-native
+ephemeral runners. Instead of downloading/compiling the project's dependencies
+on every run, it packages them into a reusable container.
 
-The design goal is time-to-build. Supply-chain trust properties are a free
-result. See [design](./DESIGN.md) for architecture, performance model, trust
-modes, and threat model.
+*Under the hood:* It creates OCI seed images with the dependency graph packaged
+as content-addressed layers, eliminating the need to reconstruct the
+`/nix/store` on ephemeral runners.
+
+Build provenance is cryptographically attested: quorum proves that what is in
+git is what was built.
+
+For full implementation detail, see [design](./DESIGN.md).
 
 ## Why?
 
-In environments without a pre-populated `/nix/store`, the entire dependency
-closure must be realized before a build can begin. This setup tax often
+In environments without a pre-populated `/nix/store` (i.e. standard GitHub
+Actions runners), every dependency, and the dependency's dependencies, must be
+downloaded or built before the actual build can begin. This setup tax often
 dominates total job time.
 
 Build time does not change. Setup time does. Source must always be fetched
@@ -21,8 +27,8 @@ Traditional CI setup scales with total dependency size. Seeded CI setup scales
 with dependency change since the last seed.
 
 When only application code changes, the previous seed is reused and
-time-to-build is near-instant. When the input graph changes, or when no seed
-exists yet, the seed is built before application build.
+time-to-build is near-instant. When a dependency changes, or when no seed exists
+yet, the seed is built before application build.
 
 ## Quickstart
 
@@ -100,3 +106,11 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
+
+______________________________________________________________________
+
+## Footnotes
+
+\[^ci\]: **CI** - Continuous Integration. The practice of automating the
+integration of code changes from multiple contributors into a single software
+project.
