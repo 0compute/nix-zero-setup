@@ -277,27 +277,24 @@ statements prove what was built.
 Storing the full in-toto statement on-chain is feasible but not recommended. A
 typical statement is 1,000-2,000 bytes; at 16 gas per non-zero calldata byte
 that adds roughly 16,000-32,000 gas per builder per system - a 10-20x increase
-in calldata cost - and bloats L2 data availability. The alternative is to anchor
-only the statement digest on-chain (32 bytes, negligible cost) as a fourth
-parameter `attest(commit, system, digest, in_toto_digest)`, binding the off-chain
-provenance to the quorum record without the size cost. The current design omits
-the digest for simplicity; a production deployment may add it.
-
-<!-- AGENT: fix this in-toto is required -->
+in calldata cost - and bloats L2 data availability. Instead, the statement digest
+is anchored on-chain (32 bytes, negligible cost) as a fourth parameter
+`attest(commit, system, digest, in_toto_digest)`. This binds the off-chain
+provenance to the quorum record without the size cost.
 
 Each builder holds a persistent signing key registered in the contract at
 genesis. A build produces a single on-chain transaction:
 
 ```solidity
-attest(commit, system, digest)
+attest(commit, system, digest, in_toto_digest)
 ```
 
 signed by the builder's registered key. The contract records
-`(commit, system, digest, builder_address, block_number)` for each submission,
+`(commit, system, digest, in_toto_digest, builder_address, block_number)` for each submission,
 then:
 
 1. Checks that N distinct registered builders have submitted the same
-   `(commit, system, digest)` tuple.
+   `(commit, system, digest, in_toto_digest)` tuple.
 1. Verifies independence constraints across the N builders (`corporateParent`,
    `jurisdiction`, infrastructure, substituters).
 1. When quorum is satisfied across all target systems, publishes the digest tree
@@ -389,7 +386,7 @@ fee conditions. The ranges below are planning estimates for a quorum of 3
 builders across 4 systems (`aarch64-darwin`, `aarch64-linux`, `x86_64-darwin`,
 `x86_64-linux`), not guarantees.
 
-- `attest(commit, system, digest)` submission (per builder per system):
+- `attest(commit, system, digest, in_toto_digest)` submission (per builder per system):
   - expected gas: 120,000 to 220,000
   - expected cost: 0.00006 to 0.00022 ETH
   - expected USD (ETH = $3,000): $0.18 to $0.66
