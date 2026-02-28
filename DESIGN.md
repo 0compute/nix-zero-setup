@@ -707,9 +707,6 @@ ______________________________________________________________________
 
 ## Footnotes
 
-A binary cache source that serves pre-built outputs instead of building locally
-from source.
-
 [^anchor]: **Anchor:** Writing a release fingerprint (digest or Merkle root) to
     an immutable ledger so it cannot be silently changed later.
 
