@@ -1,10 +1,11 @@
 # Nix Seed: Design
 
-Nix Seed provides OCI seed images for Nix-built projects, packaging their
-dependency closure as content-addressed OCI layers to eliminate per-job
-reconstruction of `/nix/store`.
+Nix Seed provides OCI seed images for Nix-built projects in non-native
+ephemeral CI runners, packaging their dependency closure as content-addressed
+OCI layers to eliminate per-job reconstruction of `/nix/store`.
 
-The target is time-to-build (setup phase) performance.
+The goal is near-zero time-to-build (setup time) for happy-path builds
+(application code change only).
 
 Trustworthiness is not added overhead - it is a property of the build graph.
 
@@ -15,7 +16,7 @@ The release pointer is the image digest,
 Registry tags and metadata are non-authoritative.
 
 Layering is delegated to `nix2container`[^nix2container]. Execution is handled
-by external workflow scripts.
+by workflow scripts external to the container.
 
 ### Performance
 
@@ -87,8 +88,8 @@ instructions. There is no opaque compiler binary to trust.
 
 From stage0, the chain builds through [GNU
 Mes](https://www.gnu.org/software/mes/) - a minimal C compiler and Scheme
-interpreter bootstrapped entirely from the assembler - then through tcc and gcc,
-arriving at the full toolchain. <!-- AGENT: link tcc and gcc. --> The upper
+interpreter bootstrapped entirely from the assembler - then through [tcc](https://bellard.org/tcc/) and [gcc](https://gcc.gnu.org/),
+arriving at the full toolchain. The upper
 layers are handled by
 [live-bootstrap](https://github.com/fosslinux/live-bootstrap). The entire chain
 is coordinated with [bootstrappable.org](https://bootstrappable.org/). The
@@ -163,8 +164,7 @@ Each project maintains a `.seed.lock` containing a digest per target system:
 }
 ```
 
-If no digest exists for a system, the seed is built, locked, and the normal
-build proceeds.
+If no digest exists for a system, the seed is built, the resulting digest is recorded in a new commit containing the updated `.seed.lock`, and the normal build proceeds.
 
 After each build, an in-toto statement is generated describing inputs and build
 metadata, signed via OIDC[^oidc]/KMS[^kms] using cosign[^cosign],
@@ -270,7 +270,7 @@ revocation occurs.
 
 Builders must enforce `substituters =` (empty) and `trusted-substituters =`
 (empty), and include the effective `nix show-config` output in the attested
-build metadata so verifiers can reject substituted builds.
+build metadata so verifiers can reject substituted builds. (Note: A malicious or compromised builder could theoretically spoof the `nix show-config` output in the signed metadata. The L2 contract verifies the *claim* of independence, not a cryptographic proof of local execution).
 
 The `.seed.lock` file is not used.
 
@@ -324,6 +324,7 @@ immutable trust anchor.
 - Threshold should be at least 2-of-3 for emergency revocation/rotation.
 - If a genesis key is lost before finalization, restart genesis with a new
   builder set and publish a signed incident record.
+- If keys are lost post-finalization such that the multi-sig drops below the rotation threshold (e.g., 2-of-3), the L2 contract is permanently bricked for that project and requires a hard fork to a new contract.
 - If a builder is revoked post-genesis, re-evaluate affected releases and
   republish status.
 
@@ -333,6 +334,8 @@ This project is intentionally low-code: it mainly defines build policy,
 verification rules, and workflow wiring around existing Nix/Sigstore/container
 systems. That limits direct application attack surface because there is little
 custom runtime logic to exploit.
+
+**Scope Boundary (Malicious Code):** Nix Seed guarantees *what is in git is what is built*. If an attacker compromises a maintainer's account and merges a backdoor, Nix Seed will faithfully execute a quorum-backed build of the malware. It does not protect against malicious source code.
 
 The primary risk is **misconfiguration**, not complex code execution. The
 highest-impact failure modes are:
@@ -378,9 +381,7 @@ For the CLOUD Act specifically: data held by a US-controlled provider is
 reachable regardless of physical location. Region selection provides performance
 and data residency properties only; it does not alter legal jurisdiction.
 
-<!-- AGENT: link NSL to footnote -->
-
-NSLs require no judicial approval and carry a gag order. The provider's
+NSLs[^nsl] require no judicial approval and carry a gag order. The provider's
 compliance team will not notify you. An administration that has fired inspectors
 general in bulk, declared independent agencies optional, and installed loyalists
 at the DOJ has the same legal access to your build infrastructure as any other.
@@ -402,13 +403,11 @@ capability.
 
 **Hardware interdiction:** TAO's ANT catalog documents implants for network
 equipment, hard drives, and server hardware. Supply chains routed through US
-logistics are interdiction targets. <!-- AGENT: is it even possible to have
-US-free hardware? -->
+logistics are interdiction targets. (Note: purely non-US COTS hardware is practically impossible; the mitigation relies on N independent stacks so an implant must hit multiple targeted supply chains simultaneously).
 
 **Cryptographic risk:** NSA seeded a backdoor into Dual_EC_DRBG (NIST SP
 800-90A). Any NIST-blessed primitive should be treated with suspicion.
-P-256 (used in cosign/ECDSA) is NIST-approved. Prefer Ed25519 where the stack
-permits. <!-- AGENT: does the stack permit? -->
+P-256 (used in cosign/ECDSA) is NIST-approved. Use Ed25519 as the standard signing algorithm. Note: Azure Key Vault does not support Ed25519 natively (requires Managed HSM tier); if Azure is a mandatory builder, P-256/P-384 may be forced.
 
 **System impact:**
 
@@ -429,8 +428,8 @@ permits. <!-- AGENT: does the stack permit? -->
 - Store genesis and builder keys in HSMs, not CI secret store environment
   variables. A hardware token that cannot exfiltrate the private key raises the
   cost of compromise significantly.
-- At least one quorum builder should be on non-Five-Eyes hardware with a
-  documented, audited supply chain. <!-- AGENT: DRY. -->
+- At least one quorum builder should be on non-Five-Eyes infrastructure with a
+  documented, audited supply chain.
 - The L2-anchored contract design already provides the strongest available
   mitigation: N independent signers on N independent hardware stacks must all be
   compromised simultaneously. Cost scales with N.

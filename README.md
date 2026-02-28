@@ -26,6 +26,10 @@ exists yet, the seed is built before application build.
 
 ## Quickstart
 
+> [!NOTE] This quickstart demonstrates a minimal, single-builder (1-of-1)
+> example for evaluation. This completely bypasses the trust model. For
+> production, see the documentation on orchestrating an N-of-M quorum.
+
 Add `nix-seed` to your flake and expose a `seed` attribute:
 
 ```nix
@@ -34,26 +38,13 @@ Add `nix-seed` to your flake and expose a `seed` attribute:
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     nix-seed = {
-      url = "github:your-org/nix-seed";
+      url = "github:0compute/nix-seed";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     systems.url = "github:nix-systems/default";
   };
 
   outputs = inputs: {
-
-    seedCfg = {
-        builders = {
-        aws = { ... };
-        azure = { ... };
-        gcp = { ... };
-        github = { ... };
-        gitlab = { ... };
-        };
-        # allow 1 builder to be down
-        quorum = 4;
-    };
-
     packages =
       inputs.nixpkgs.lib.genAttrs (import inputs.systems) (
         system:
@@ -69,7 +60,6 @@ Add `nix-seed` to your flake and expose a `seed` attribute:
           };
         }
       );
-
   };
 
 }
@@ -79,7 +69,16 @@ Add `nix-seed` to your flake and expose a `seed` attribute:
 
 Add a workflow:
 
+> [!WARNING] This job runs with `packages: write` and `id-token: write`
+> permissions. Never trigger seed generation with write tokens on untrusted pull
+> requests to prevent privilege escalation and/or namespace poisoning.
+
 ```yaml
+on:
+  push:
+    branches:
+      - master
+
 jobs:
   seed:
     runs-on: ubuntu-latest
@@ -95,10 +94,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     needs: seed
-    container: ghcr.io/${{ github.repository }}-seed:${{ hashFiles('flake.lock') }}
     steps:
       - uses: actions/checkout@v6
-      - uses: 0compute/nix-seed@v1/actions/build.yaml
+      - uses: 0compute/nix-seed@v1/actions/build
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
