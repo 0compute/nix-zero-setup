@@ -54,8 +54,10 @@ The release pointer is the OCI image digest
 (`ghcr.io/org/repo.seed@sha256:<digest>`). Registry[^registry] tags and metadata
 are non-authoritative.
 
-Layering is delegated to `nix2container`[^nix2container]. Execution is handled
-by workflow scripts external to the container.
+Layering is delegated to
+[nix2container](https://github.com/nlewo/nix2container), which provides an
+efficient container build workflow. Execution is handled by workflow scripts
+external to the container.
 
 ### Performance
 
@@ -98,7 +100,7 @@ The benchmark command is:
 ### Seed Construction
 
 1. The seed build evaluates a Nix-built project.
-1. `nix2container`[^nix2container]: produces an OCI image of the dependency
+1. `nix2container`: produces an OCI image of the dependency
    closure, whose layers correspond to store paths, and a metadata manifest,
    which includes image digest.
 1. The image is pushed to an OCI registry.
@@ -811,9 +813,6 @@ ______________________________________________________________________
     (2017)](https://www.chinalawtranslate.com/en/national-intelligence-law/):**
     Chinese law compelling any Chinese entity to cooperate with intelligence
     services on demand and without public disclosure.
-
-[^nix2container]: **[nix2container](https://github.com/nlewo/nix2container):**
-    Provides an efficient container build workflow for Nix
 
 [^nsl]: **[NSL](https://www.eff.org/issues/national-security-letters):**
     National Security Letter. Administrative subpoena issued without judicial
