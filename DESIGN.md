@@ -58,6 +58,14 @@ Layering is delegated to
 efficient container build workflow. Execution is handled by workflow scripts
 external to the container.
 
+> [!WARNING]
+>
+> **Guarantee boundary.** Nix Seed verifies reproducibility and provenance from
+> declared inputs. It does not prove the absence of firmware implants,
+> compromised hardware roots of trust, or malicious maintainers with valid
+> signing authority. These threats require operational controls (key ceremony,
+> hardware trust policy, personnel/process controls), not software-only fixes.
+
 ### Performance
 
 - Closure realization is replaced by pulling and mounting an OCI filesystem
@@ -115,6 +123,10 @@ revision.
 
 Seed builds are executed offline by passing `--network none` to the container
 runtime.
+
+Before any build begins, source retrieval MUST be immutable and pinned to a
+commit digest (never a mutable branch ref). `flake.lock` integrity verification
+is handled by Nix evaluation/build itself, and mismatches fail by design.
 
 #### Non-Container Results
 
@@ -197,7 +209,7 @@ Quorum is only meaningful if builders span independent failure domains:
 organization, jurisdiction, infrastructure, and identity issuer.
 
 **Signing identity independence** requires that no single operator controls the
-signing identities of multiple quorum builders. In Dev mode, identity is
+signing identities of multiple quorum builders. In development mode, identity is
 established via OIDC issuer: GitHub Actions
 (`token.actions.githubusercontent.com`) and Azure Pipelines
 (`vstoken.dev.azure.com`) share a Microsoft-controlled issuer and do not satisfy
@@ -211,7 +223,7 @@ forge a majority. Unanimous (M-of-M) is the strongest guarantee. See
 [`modules/seedcfg.nix`](modules/seedcfg.nix) and
 [`modules/builders.nix`](modules/builders.nix) for the builder registry schema.
 
-**Timing:** in Dev mode with N-of-M and a deadline, a party controlling M-N
+**Timing:** in development mode with N-of-M and a deadline, a party controlling M-N
 builders can delay attestation to ensure the deciding N-th vote comes from a
 builder of their choice. Production mode eliminates this: attestations
 accumulate indefinitely and quorum is declared when the threshold is met, not
@@ -225,9 +237,8 @@ If builders disagree on the digest, release fails.
 
 > [!WARNING]
 >
-> **Not for production.** Dev mode depends on Rekor[^rekor] availability and
-> external OIDC[^oidc] trust roots. Use [Production mode](#production-todo) for
-> production releases.
+> **Not for production.** development mode depends on Rekor[^rekor] availability
+> and external OIDC[^oidc] trust roots.
 
 Each project maintains a `.seed.lock` containing a digest per target system:
 
@@ -274,7 +285,7 @@ At minimum, the statement must bind:
 > [!NOTE]
 >
 > Builder cache configuration (substituters[^substituter]) is not attested in
-> Dev mode. Two builders both substituting from the same cache (e.g.
+> development mode. Two builders both substituting from the same cache (e.g.
 > `cache.nixos.org`) are trusting the cache operator rather than independently
 > building.
 
@@ -336,6 +347,11 @@ publishes it to the OCI registry as a referrer artifact keyed by the build
 result digest. Rekor[^rekor] is not used; the OCI registry hosts the provenance.
 The contract anchor proves N builders agreed on the digest; the in-toto
 statements prove what was built.
+
+Registry operators MUST guarantee referrer retention and API support required to
+retrieve provenance for the full artifact lifetime. Production deployments
+SHOULD replicate provenance artifacts to a secondary registry or immutable
+archive to reduce single-registry loss/corruption risk.
 
 ```mermaid
 sequenceDiagram
@@ -411,9 +427,12 @@ The master builder's role is reduced to monitoring the contract for the
 published root. Master-builder trust is removed from the promotion path.
 
 **Key management:** builder keys are persistent secrets held in CI secret
-stores. Compromise triggers revocation via the contract's governance multi-sig[^multi-sig]
-(see [Governance Constraints](#governance-constraints)). Keys are registered at
-genesis and rotated by contract multi-sig.
+stores. In Production mode, signing keys SHOULD be non-exportable and backed by
+HSM/KMS-HSM class infrastructure if costs permit. Raw private keys stored
+directly in CI secret stores are NOT RECOMMENDED for Production mode. Compromise
+triggers revocation via the contract's governance multi-sig (see [Governance
+Constraints](#governance-constraints)). Keys are registered at genesis and rotated
+by contract multi-sig.
 
 **Why CI key compromise still matters:** the contract verifies that `N` distinct
 registered builder keys signed the same tuple. It does not distinguish an
@@ -424,6 +443,17 @@ malicious digest can satisfy quorum until revocation occurs.
 Builders must enforce `substituters =` (empty) and `trusted-substituters =`
 (empty). The effective `nix show-config` output is included in the in-toto
 statement so verifiers can reject substituted builds.
+
+Verifier policy MUST fail closed on any of the following:
+
+- missing in-toto statement, signature, or signature-chain verification failure
+- signer identity not in registered builder set
+- missing required predicate fields (source URI, commit digest, `flake.lock`
+  digest, target `system`, output digest)
+- source URI/commit/`flake.lock` mismatch versus expected build inputs
+- `nix show-config` indicates non-empty `substituters` or
+  `trusted-substituters`
+- missing or invalid inclusion proof for the anchored per-system digest
 
 > [!NOTE]
 >
@@ -466,6 +496,10 @@ ceremony distinct from normal builds:
 
 Post-genesis builds use the standard N-of-M threshold. The genesis root is the
 immutable trust anchor.
+
+Operationally, deployments MUST maintain incident runbooks for: key loss,
+builder unavailability, builder compromise/revocation, and emergency quorum
+reconfiguration.
 
 > [!NOTE]
 >
@@ -588,9 +622,14 @@ entirely to the domestic political climate of a single sovereign nation.
 > Region selection provides performance and data residency properties only; it
 > does not alter legal jurisdiction.
 
-A quorum composed entirely of US-headquartered CI providers is a single failure
-domain. Practically, a meaningful quorum requires that at least one quorum
-builder be:
+A relevant EU counter-trend is the **Gaia-X Level 3 initiative** for stronger
+European operational sovereignty and assurance baselines; treat it as useful
+procurement signal, not a cryptographic substitute for independent quorum
+builders and key custody controls.
+
+A quorum composed entirely of US-headquartered CI providers is legally a single
+failure domain. Practically, a meaningful quorum requires that at least one
+quorum builder be:
 
 - Hosted on hardware controlled by an organization incorporated outside of the
   US.
@@ -631,7 +670,7 @@ P-256/P-384 may be forced.
 
 **System impact:**
 
-- **Dev mode:** Rekor submissions, OIDC token issuance, and registry
+- **development mode:** Rekor submissions, OIDC token issuance, and registry
   traffic are all passively observable. The transparency log is transparent to
   the adversary by design.
 - **Production mode:** contract transactions are public by design; no
