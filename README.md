@@ -1,9 +1,10 @@
 # Nix Seed
 
-Nix on ephemeral CI: happy-path (app src change only) **build starts in seconds**.
+Nix on ephemeral CI: happy-path (app src change only) **build starts in
+seconds**.
 
-Dependency closure ships as content-addressed OCI layers; signed provenance
-and SBOM included.
+Dependency closure ships as content-addressed OCI layers; signed provenance and
+SBOM included.
 
 > Dependencies realized, once: $$$.
 >
@@ -46,7 +47,7 @@ with a single builder.
 
 > I Want To Believe.
 >
-> - Fox Mulder, The X-Files
+> - Fox Mulder, The X-Files, 1993
 
 [Credulous](./DESIGN.md#credulous) anchors trust on the Rekor public-good
 instance with an N-of-M independent builder quorum.
@@ -64,7 +65,9 @@ signed git tag (format configurable) on the source commit.
 
 ### Trust Level: Zero
 
-> Security Doctrine: Trust No Fucker.
+> In God we trust. All others must bring data.
+>
+> - W. Edwards Deming, c. 1980
 
 [Zero](./DESIGN.md#zero) anchors trust on an Ethereum L2 smart contract with an
 N-of-M independent builder quorum.
@@ -75,8 +78,8 @@ N-of-M independent builder quorum.
   - **Immutable Ledger**
   - **No Central Actor**
   - **Contract-Enforced Builder Independence**
-- Attack Surface: Misconfiguration, governance keys, [hardware
-  interdiction](./DESIGN.md#hardware-interdiction).
+- Attack Surface: Misconfiguration, governance keys,
+  [hardware interdiction](./DESIGN.md#hardware-interdiction).
 - Resiliency: High.
 - Cost (assuming 3 builders across 4 systems): 0.001 to 0.003 ETH ($3 to $9 at
   ETH = $3,000).
@@ -136,8 +139,7 @@ Add `nix-seed` to your flake and expose `seed` and `seedCfg`:
 > [!WARNING]
 >
 > Seed and project builds require `id-token: write` permission. Seed build, and
-> project build if outputs include a container image, require `packages:
-> write`.
+> project build if outputs include a container image, require `packages: write`.
 >
 > Untrusted pull requests with changes to `flake.lock` **MUST NOT** trigger
 > build of seed or project.
@@ -156,8 +158,9 @@ on:
     branches:
       - master
     paths:
-      # extend if additional dependency sources exist (e.g. pyproject.toml);
-      # build workflow paths-ignore MUST match
+      # extend with additional sources of dependency truth (e.g. Cargo.lock,
+      # poetry.lock, package-lock.json, go.sum)
+      # WARNING: build workflow `paths-ignore` MUST match
       - flake.lock
   # permit manual start
   workflow_dispatch:
@@ -231,34 +234,33 @@ jobs:
 >
 > Read it. Twice. Or, get pwned.
 
-Update `seedCfg`: set `trust` to `credulous` and define `builders` and
-`quorum`. See [Threat Actors](./DESIGN.md#threat-actors) for guidance on
-builder independence.
+Update `seedCfg`: set `trust` to `credulous` and define `builders` and `quorum`.
+See [Threat Actors](./DESIGN.md#threat-actors) for guidance on builder
+independence.
 
 > [!NOTE]
 >
-> This is the only option until [Trust Level: Zero](#trust-level-zero) is
-> implemented. Refer to [Trust Level: Credulous](#trust-level-credulous) for
-> guarantee and attack surface detail.
+> This is the only option until [Zero](#trust-level-zero) is implemented. Refer
+> to [Credulous](#trust-level-credulous) for guarantee and attack surface
+> detail.
 
 ```nix
 # in flake outputs
 seedCfg = {
   trust = "credulous";
   builders = {
-    aws = { };
-    gcp = { };
     github.master = true;
     gitlab = { };
     scaleway = { };
   };
-  # allow 1-of-5 builders to be down
-  quorum = 4;
+  # allow 1 builder to be down without blocking quorum
+  quorum = 2;
 };
 ```
 
 `nix-seed` includes a sync helper that creates and configures builder repos to
-mirror the source repository. Provider credential tokens must be set in the environment.
+mirror the source repository. Provider credential tokens must be set in the
+environment.
 
 ```sh
 nix run github:0compute/nix-seed/v1#sync
