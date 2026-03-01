@@ -117,7 +117,7 @@ Add `nix-seed` to your flake and expose `seed` and `seedCfg`:
         {
           # placeholder: replace
           default = pkgs.hello;
-          # seed is passed flake self, realizes inputs of all flake outputs
+          # seed is passed flake self; it realizes inputs for all flake outputs
           seed = inputs.nix-seed.lib.mkSeed {
             inherit pkgs;
             inherit (inputs) self;
@@ -132,7 +132,7 @@ Add `nix-seed` to your flake and expose `seed` and `seedCfg`:
 > [!NOTE]
 >
 > This is GitHub-specific. The approach applies to any CI.
-
+>
 > [!WARNING]
 >
 > Seed and project builds require `id-token: write` permission. Seed build, and
