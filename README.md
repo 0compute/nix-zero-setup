@@ -22,10 +22,10 @@ See [design](./DESIGN.md) for full detail.
 
 ## Why?
 
-Standard CI runners rebuild every Nix dependency from scratch. For a typical
-project: 60-90 seconds of setup per job.
+Standard CI runners need to realize the Nix store at the start of each job. For
+a typical project: >60 seconds of setup.
 
-Build time does not change. Setup time is virtually eliminated.
+Build time does not change. Setup time is (almost) eliminated.
 
 ## Quickstart
 
