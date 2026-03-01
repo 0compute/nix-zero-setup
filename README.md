@@ -1,6 +1,6 @@
 # Nix Seed
 
-Nix on ephemeral CI: happy-path (app source change only) **build start is
+Nix on ephemeral CI: happy-path (app source change only) **build setup is
 functionally instant**.
 
 Dependencies shipped as content-addressed [OCI] layers.
