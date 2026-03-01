@@ -551,11 +551,12 @@ orchestration code.
 
 ### USA
 
-`.gov` holds hegemony over the global internet: ICANN[^icann] controls domain
-name resolution and root DNS[^dns]; the majority of root certificate authorities
-are US-headquartered; BGP[^bgp] routing registries are US-operated; and every
-major hyperscaler, CDN[^cdn], software distribution platform, and CI service is
-either US-incorporated or subject to US jurisdiction.
+The global internet suffers from acute jurisdictional centralization:
+ICANN[^icann] controls domain name resolution and root DNS[^dns]; the majority
+of root certificate authorities are US-headquartered; BGP[^bgp] routing
+registries are US-operated; and every major hyperscaler, CDN[^cdn], software
+distribution platform, and CI service is either US-incorporated or subject to US
+jurisdiction.
 
 This is not merely a legal posture - it is the physical and organizational
 topology of the internet.
