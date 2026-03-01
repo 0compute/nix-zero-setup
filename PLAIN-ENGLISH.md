@@ -48,6 +48,12 @@ Three costs:
    interruption takes time - often longer than the interruption itself.
 1. **Compute.** The same setup cost - cash and energy - is paid repeatedly.
 
+**Flow state is having the entire system architecture loaded into mental RAM.
+The friction between thought and code is zero.**
+
+It takes 20 minutes of deep focus to boot up. It takes a single minute waiting
+for CI to wipe it clean.
+
 ### Solution: Layers and Registries
 
 Nix Seed pre-builds the dependencies and stores them in a *registry* - a

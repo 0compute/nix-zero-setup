@@ -1,32 +1,30 @@
 # Nix Seed
 
-Nix on non-native ephemeral CI: happy-path (app src change only) **build starts
-in seconds**.
+Nix on non-native ephemeral CI: happy-path (app source change only) **build
+starts in seconds**.
 
-Dependency closure ships as content-addressed OCI layers; signed provenance and
-SBOM included.
+Dependency closure ships as content-addressed OCI layers. Explicit trust anchors
+with 3 trust modes.
 
+> Supply chain, secured: $$$
+>
 > Dependencies realized, once: $$$.
 >
-> Flow state, uninterrupted: $$$.
->
-> A build guaranteed by Hard Math: Priceless.
+> Flow state, uninterrupted: Priceless.
 
-Full breakdown and threat model: [Design](./DESIGN.md).
+Want more?
 
-Lost in the jargon? Got you: [Plain English](./PLAIN-ENGLISH.md).
-
-<!--
-AGENT: glossary should become a soft into for non-technical readers. Many of the
-defined terms should be replaced in this doc and DESIGN.md with the link to
-further info
--->
+- [Full breakdown with threat model](./DESIGN.md).
+- [Lost in the jargon?](./PLAIN-ENGLISH.md).
 
 ## Trust
 
 > Just because you're paranoid doesn't mean they aren't after you.
 >
 > - Anonymous, c. 1967
+
+Nix Seed has three trust modes. Choose one, based on your risk tolerance and
+budget.
 
 ### Trust Level: Innocent
 
@@ -92,6 +90,8 @@ N-of-M independent builder quorum.
 
 ## Quickstart/Evaluation
 
+This section details the minimum setup to evaluate Nix Seed on GitHub Actions.
+
 > [!WARNING]
 >
 > Do not use [Innocent](#trust-level-innocent) in production. Minimum:
@@ -139,7 +139,8 @@ Add `nix-seed` to your flake and expose `seed` and `seedCfg`:
 > [!WARNING]
 >
 > Seed and project builds require `id-token: write` permission. Seed build, and
-> project build if outputs include a container image, require `packages: write`.
+> project build, if outputs include a container image, require
+> `packages: write`.
 >
 > Untrusted pull requests with changes to `flake.lock` **MUST NOT** trigger
 > build of seed or project.
@@ -234,9 +235,14 @@ jobs:
 >
 > Read it. Twice. Or, get pwned.
 
-Update `seedCfg`: set `trust` to `credulous` and define `builders` and `quorum`.
-See [Threat Actors](./DESIGN.md#threat-actors) for guidance on builder
-independence.
+For production, update `seedCfg`:
+
+- set `trust = "credulous"`
+- define `builders`
+- define `quorum`
+
+See [Threat Actors](./DESIGN.md#threat-actors) for builder-independence
+guidance.
 
 > [!NOTE]
 >
