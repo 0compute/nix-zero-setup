@@ -9,8 +9,8 @@ Happy-path builds - application code change, dependencies unchanged - start
 image; pull, mount, build.
 
 CI providers with co-located registries, like GitHub and GHCR, mean the pull is
-fast. The extreme cacheability of Nix-built OCI layers means that the pull may
-not be necessary at all.
+fast. The extreme cacheability of Nix-built OCI layers means the pull may not be
+necessary at all.
 
 > Flow state, unbroken: $$$
 >
