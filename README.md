@@ -92,10 +92,10 @@ N-of-M independent builder quorum.
 
 - Guarantee: Hard Math. No builder, organisation, or jurisdiction can forge a
   release. Source:
-  - **Full-Source Bootstrap**
-  - **Immutable Ledger**
-  - **No Central Actor**
-  - **Contract-Enforced Builder Independence**
+  - **Full-source bootstrap**
+  - **Immutable ledger**
+  - **No central actor**
+  - **Contract-enforced builder independence**
 - Attack Surface: Misconfiguration, governance keys,
   [hardware interdiction](./DESIGN.md#hardware-interdiction).
 - Resiliency: High.
