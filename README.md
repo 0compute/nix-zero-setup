@@ -3,8 +3,9 @@
 Nix on ephemeral CI: happy-path (app source change only) **build start is
 functionally instant**.
 
-Dependencies shipped as content-addressed [OCI] layers. Explicit trust anchors
-built-in.
+Dependencies shipped as content-addressed [OCI] layers.
+
+Explicit trust anchors built-in.
 
 > Supply chain, secured: $$$
 >
