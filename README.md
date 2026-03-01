@@ -16,7 +16,7 @@ Details?
 
 - [Design](./DESIGN.md).
 - [Threat Actors](./THREAT-ACTORS.md).
-- [Plain English](./PLAIN-ENGLISH.md) (for non-technical readers).
+- [Plain English](./PLAIN-ENGLISH.md) for non-technical readers.
 
 ## Performance
 
