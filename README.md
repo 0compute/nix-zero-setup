@@ -3,8 +3,8 @@
 Nix on ephemeral CI: happy-path (app source change only) **build start is
 functionally instant**.
 
-Dependencies shipped as seed [OCI] images with content-addressed layers.
-Explicit trust anchors built-in.
+Dependencies shipped as content-addressed [OCI] layers. Explicit trust anchors
+built-in.
 
 > Supply chain, secured: $$$
 >
@@ -292,5 +292,3 @@ nix run github:0compute/nix-seed/v1#sync
 ```
 
 ______________________________________________________________________
-
-[oci]: https://opencontainers.org/
