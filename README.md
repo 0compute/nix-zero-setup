@@ -15,7 +15,7 @@ with 3 trust modes.
 Want detail?
 
 - [Full breakdown with threat model](./DESIGN.md).
-- [Lost in the jargon?](./PLAIN-ENGLISH.md).
+- [Plain English for non-technical readers](./PLAIN-ENGLISH.md).
 
 ## Trust
 
