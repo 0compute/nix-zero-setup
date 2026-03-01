@@ -1,23 +1,20 @@
 # Nix Seed
 
-Nix on ephemeral CI: happy-path (app source change only) **build setup is
-functionally instant**.
+Nix on ephemeral CI: happy-path (source-only change) **build setup is
+functionally instant (\<10s)**.
 
 Dependencies shipped as content-addressed [OCI] layers.
 
 Explicit trust anchors built-in.
+
+Docs → [Design](./DESIGN.md) / [Threat Actors](./THREAT-ACTORS.md) /
+[Plain-English overview](./PLAIN-ENGLISH.md).
 
 > Supply chain, secured: $$$
 >
 > Dependencies realized, once: $$$.
 >
 > Flow state, uninterrupted: Priceless.
-
-Details?
-
-- [Design](./DESIGN.md).
-- [Threat Actors](./THREAT-ACTORS.md).
-- [Plain English](./PLAIN-ENGLISH.md) for non-technical readers.
 
 ## Performance
 
@@ -35,8 +32,8 @@ The difference is Night and Day.
 
 CI provider fixed startup latency (provision and boot VM) is ~5s.
 
-Another 5s to pull/mount the OCI layers? Highly practical with a local registry
-(Hello, GHCR!).
+Another 5s to pull/mount the OCI layers? Highly practical with a runner-local
+registry (Hello, GHCR!).
 
 ## Trust
 
