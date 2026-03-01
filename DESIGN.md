@@ -88,12 +88,11 @@ The benchmark command is:
    which includes image digest.
 1. The image is pushed to an OCI registry.
 
-`nix2container` is a pinned flake input; its version and digest are verified by
-the Nix build system under the same supply chain trust model as all other
-dependencies.
+`nix2container` is a pinned flake input, as is Nix Seed itself; their digests
+are verified by the Nix build system under the same supply chain trust model as
+all other dependencies.
 
-Nix Seed itself is a pinned flake input: the build orchestrator is subject to
-the same supply-chain trust model as everything it builds.
+### Seeded Builds
 
 Seed builds are executed offline by passing `--network none` to the container
 runtime.
@@ -485,7 +484,7 @@ reconfiguration.
 > hardened CI infrastructure instead. Document the environment used; publish a
 > signed incident record if it is later found compromised.
 
-###### L2 Gas Costs
+###### Gas Costs
 
 Gas[^gas] cost depends on calldata[^calldata] size, state writes, and current L2
 fee conditions. The ranges below are planning estimates for a quorum of 3
@@ -577,18 +576,14 @@ verification-by-default, and auditable configuration.
 
 ### USA
 
-The global internet suffers from acute jurisdictional centralization:
+The global internet suffers from acute jurisdictional centralization: US-based
 ICANN[^icann] controls domain name resolution and root DNS[^dns]; the majority
-of root certificate authorities are US-headquartered; BGP[^bgp] routing
-registries are US-operated; and every major hyperscaler, CDN[^cdn], software
-distribution platform, and CI service is either US-incorporated or subject to US
-jurisdiction.
+of root certificate authorities are also US-based; BGP[^bgp] routing registries
+are US-operated; and every major hyperscaler is either US-incorporated or
+subject to US jurisdiction.
 
 This is not merely a legal posture - it is the physical and organizational
 topology of the internet.
-
-The legal tools described below are available to any `.gov` actor. Extra-legal
-tools extend the reach still further.
 
 #### Legal
 
@@ -619,14 +614,14 @@ European operational sovereignty and assurance baselines; treat it as useful
 procurement signal, not a cryptographic substitute for independent quorum
 builders and key custody controls.
 
-A quorum composed entirely of US-headquartered CI providers is legally a single
-failure domain. Practically, a meaningful quorum requires that at least one
-quorum builder be:
+A quorum composed entirely of US-headquartered CI providers is a single failure
+domain. Practically, a meaningful quorum requires that at least one quorum
+builder be:
 
-- Hosted on hardware controlled by an organization incorporated outside of the
-  US.
-- Operated in a jurisdiction with no mutual legal assistance treaty (MLAT) with
-  the US, or with significant friction in its execution (MLAT[^mlat]).
+1. Hosted on hardware controlled by an organization incorporated outside of the
+   US.
+1. Operated in a jurisdiction with no mutual legal assistance treaty (MLAT) with
+   the US, or with significant friction in its execution.
 
 Legal compulsion to *attest a specific digest* - a builder operator required
 under gag order to submit a false result - is not addressed by the cryptographic
@@ -635,51 +630,54 @@ operators simultaneously, across independent jurisdictions.
 
 #### Extra-legal
 
-Legal process is the slow path. A well-resourced intelligence agency has other
-options.
+Legal process is the slow path. NSA has other options.
 
 **Five Eyes:** the UKUSA agreement extends NSA collection to GCHQ (UK), CSE
 (Canada), ASD (Australia), and GCSB (New Zealand). A builder in any Five Eyes
 jurisdiction is not meaningfully separate from a US builder.
 
-**Active network attack:** QUANTUM INSERT[^quantum-insert] allows injection of
-malicious content into unencrypted or MITM-able traffic. BGP[^bgp] hijacking has
-been used to redirect traffic through collection points. DNS manipulation is
-within documented capability.
+**Active network attack:** QUANTUM INSERT allows injection of malicious content
+into unencrypted or MITM-able traffic. BGP hijacking has been used to redirect
+traffic through collection points. DNS manipulation is within documented
+capability.
 
-**Hardware interdiction:** TAO[^tao]'s ANT catalog[^ant-catalog] documents
-implants for network equipment, hard drives, and server hardware. Supply chains
-routed through US logistics are interdiction targets. (Note: purely non-US COTS[^cots]
-hardware is practically impossible; the mitigation relies on N independent
-stacks so an implant must hit multiple targeted supply chains simultaneously).
+**Hardware interdiction:** TAO's ANT catalog documents implants for network
+equipment, hard drives, and server hardware. Supply chains routed through US
+logistics are interdiction targets.
 
-**Cryptographic risk:** NSA seeded a backdoor into Dual_EC_DRBG[^dual-ec-drbg]
-(NIST SP 800-90A). Any NIST-blessed primitive must be considered tainted.
-P-256[^p-256] (used in cosign/ECDSA) is NIST-approved - use Ed25519[^ed25519] as
-the standard signing algorithm. Note: Azure Key Vault does not support Ed25519
-natively (requires Managed HSM[^hsm] tier); if Azure is a mandatory builder,
-P-256/P-384 may be forced.
+> [!NOTE]
+>
+> Purely non-US COTS hardware is a practical impossibility; the mitigation
+> relies on N independent stacks so an implant must hit multiple targeted supply
+> chains simultaneously.
 
-**System impact:**
+##### System impact
 
-- **development mode:** Rekor submissions, OIDC token issuance, and registry
-  traffic are all passively observable. The transparency log is transparent to
-  the adversary by design.
-- **Production mode:** contract transactions are public by design; no
-  additional surveillance surface. Builder keys stored in CI secret stores on
-  US-provider infrastructure are accessible via PRISM[^prism] without the
-  builder's knowledge.
-- **Any mode:** a builder running on hardware that passed through US logistics
-  may carry a firmware implant. A builder on a US cloud provider's VM is running
-  on hardware the adversary may have pre-implanted.
+- **Dev mode:** Rekor submissions, OIDC token issuance, and registry traffic are
+  all passively observable. The transparency log is transparent to the adversary
+  by design.
+- **Production mode:** contract transactions are public by design; no additional
+  surveillance surface. Builder keys stored in CI secret stores on US-provider
+  infrastructure are accessible via PRISM[^prism] without the builder's
+  knowledge.
+- **Any mode:** a builder running on hardware that passed through US logistics,
+  which is to say **all of them**, may carry a firmware implant.
 
 **Mitigations:**
+
+> [!WARNING]
+>
+> Cryptographic risk: NSA seeded a backdoor into Dual_EC_DRBG (NIST SP 800-90A).
+> Any NIST-blessed primitive must be considered tainted. P-256 (used in
+> cosign/ECDSA) is NIST-approved - use Ed25519 as the standard signing
+> algorithm. Note: Azure Key Vault does not support Ed25519 natively (requires
+> Managed HSM tier); if Azure is a mandatory builder, P-256/P-384 may be forced.
 
 - Use Ed25519 over P-256 for all signing operations.
 - Store genesis and builder keys in HSMs, not CI secret store environment
   variables. A hardware token that cannot exfiltrate the private key raises the
   cost of compromise significantly.
-- At least one quorum builder should be on non-Five-Eyes[^five-eyes]
+- At least one quorum builder should be on non-Five-Eyes
   infrastructure with a documented, audited supply chain.
 - The Production mode contract design already provides the strongest available
   mitigation: N independent signers on N independent hardware stacks must all be
@@ -694,11 +692,10 @@ detectable, attributable, and expensive.
 
 ### China
 
-China's National Intelligence Law (2017)[^national-intelligence-law] compels any
-Chinese entity - including Alibaba Cloud - to cooperate with intelligence
-services on demand and without disclosure. A quorum that includes Alibaba Cloud
-or any runner operated by a Chinese-headquartered entity is not legally
-independent.
+China's National Intelligence Law (2017) compels any Chinese entity - including
+Alibaba Cloud - to cooperate with intelligence services on demand and without
+disclosure. A quorum that includes Alibaba Cloud or any runner operated by a
+Chinese-headquartered entity is not legally independent.
 
 PLA Unit 61398 and MSS-linked groups (APT10, APT41) have demonstrated sustained
 supply-chain targeting, including software-update hijacking and build-server
@@ -708,22 +705,21 @@ forge a quorum.
 
 ### Russia
 
-SUNBURST (SolarWinds)[^sunburst] is the canonical build-pipeline attack: GRU /
-SVR operators compromised the SolarWinds Orion build system and inserted a
-backdoor that was signed with the legitimate code-signing key. A multi-builder
-quorum would not have prevented a single-builder build compromise - but would
-have caught it: independent builders would attest a *different* digest, breaking
+SUNBURST (SolarWinds) is the canonical build-pipeline attack: GRU / SVR
+operators compromised the SolarWinds Orion build system and inserted a backdoor
+that was signed with the legitimate code-signing key. A multi-builder quorum
+would not have prevented a single-builder build compromise - but would have
+caught it: independent builders would attest a *different* digest, breaking
 quorum and blocking promotion.
 
-SORM[^sorm] requires Russian ISPs to provide FSB with real-time access to all
-traffic. Runners in Russia or on Russian cloud infrastructure are subject to
-passive interception regardless of TLS[^tls]. Reproducible builds mean an
-observer who intercepts a build gets the same artifact but cannot inject code
-without breaking the digest.
+SORM requires Russian ISPs to provide FSB with real-time access to all traffic.
+Runners in Russia or on Russian cloud infrastructure are subject to passive
+interception regardless of TLS. Reproducible builds mean an observer who
+intercepts a build gets the same artifact but cannot inject code without
+breaking the digest.
 
 ## Compliance
 
-Apple SDK license terms prohibit redistribution. Seed images for Darwin targets
-contain only open-source store paths; Apple SDK components are not included and
-must be present on the builder host.
-
+Seed images fully respect upstream licences prohibiting redistribution. Seed
+images do not contain the Apple SDK, they reference it at build time and on
+macOS hosts.
