@@ -66,12 +66,6 @@ signed git tag (format configurable) on the source commit.
 
 > Security Doctrine: Trust No Fucker.
 
-> [!NOTE]
->
-> Zero is not yet implemented.
->
-> Funding applications pending: NLnet, Sovereign Tech Fund.
-
 [Zero](./DESIGN.md#zero) anchors trust on an Ethereum L2 smart contract with an
 N-of-M independent builder quorum.
 
@@ -86,6 +80,12 @@ N-of-M independent builder quorum.
 - Resiliency: High.
 - Cost (assuming 3 builders across 4 systems): 0.001 to 0.003 ETH ($3 to $9 at
   ETH = $3,000).
+
+> [!NOTE]
+>
+> Zero is not yet implemented.
+>
+> Funding applications pending: NLnet, Sovereign Tech Fund.
 
 ## Quickstart/Evaluation
 

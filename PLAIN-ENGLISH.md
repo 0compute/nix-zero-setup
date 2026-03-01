@@ -103,16 +103,33 @@ source.
 
 Who created the fingerprint, and can they be trusted?
 
+Every verification chain must end somewhere - a point that is accepted without
+further proof. This is the *trust anchor*: the root of the whole system. If the
+anchor is compromised, every guarantee above it falls. The three trust levels
+below differ only in what serves as the anchor and how hard it is to
+compromise.
+
 ## The Trust Solution
 
 ### Trust Level: Innocent
 
-One server builds the package and records the fingerprint on a *public log* - a
-tamper-evident, publicly accessible record of build events.
+One server builds the package and records the fingerprint on *Rekor* - a
+public transparency log operated by the Sigstore project. A *transparency log*
+is an append-only, publicly readable record: entries can be added but not
+removed or modified. It uses a Merkle tree - a mathematical structure where
+each new entry is chained to all previous entries, so altering any past record
+would require recomputing everything that came after, producing a detectable
+break in the chain. Anyone in the world can query the log and verify that a
+specific record was made at a specific time.
 
 - **Guarantees:** Tampering after the record is detectable.
 - **Does not cover:** The builder, log service, and package cache are all
   subject to US law. The US government can compel any of them.
+- **Rekor limitations:** Sigstore is a US-operated public-good service with no
+  uptime guarantee. If Rekor is down, attestations cannot be recorded and
+  builds are blocked. The log's append-only property prevents silent deletion
+  of past records, but does not prevent a compromised or compelled operator
+  from inserting false records going forward.
 - **Cost:** Free.
 
 ### Trust Level: Credulous
