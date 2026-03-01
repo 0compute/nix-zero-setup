@@ -28,14 +28,14 @@ OCI layers stream and mount concurrently over the network.
 
 The difference is Night and Day.
 
-- Build setup: reduced from >60s (typical `actions/cache` fetch) to \<10s.
+- Build setup: >60s (typical `actions/cache` fetch) to \<10s.
 - Source fetch time: unchanged.
 - Build execution time: unchanged.
 
 CI provider fixed startup latency (provision and boot VM) is ~5s.
 
-Another 5s to pull/mount the OCI layers? Eminently practical with a local
-registry (Hello, GHCR!).
+Another 5s to pull/mount the OCI layers? Highly practical with a local registry
+(Hello, GHCR!).
 
 ## Trust
 
