@@ -1,89 +1,42 @@
 # Nix Seed: Design
 
-> New to these terms? See [Glossary](./GLOSSARY.md).
+## Goals
 
-Happy-path builds - application code change only, no dependency update - start
-in under 10 seconds on any ephemeral runner. The dependency [closure] is already
-packaged; pull, mount, build. No `/nix/store` reconstruction.
+1. Happy-path builds - application code change only, no dependency update -
+   start *building* in \<10s on a standard ephemeral CI runner.
 
-The setup tax of cold closure reconstruction is a one-time cost per seed, shared
-across all subsequent jobs. Dependency changes trigger a seed rebuild;
-everything else is free.
+## Prerequisites
 
-Every build is cryptographically bound to its source: what is in git is exactly
-what was built. This is enforced by the linkage between source commit,
-dependency closure, and output artifact - not assumed.
+1. Reproducible builds are a hard prerequisite. Without reproducibility,
+   diverging digests are indistinguishable from a subverted build.
 
-## Architecture
+## Performance
 
-The release pointer is the OCI image digest
-(`ghcr.io/org/repo.seed@sha256:<digest>`). [Registry][oci-registry] tags and
-metadata are non-authoritative.
+### Comparisons
 
-Layering is handled by [nix2container](https://github.com/nlewo/nix2container);
-execution by workflow scripts external to the container.
-
-> [!WARNING]
->
-> **Guarantee boundary.** Nix Seed verifies reproducibility and provenance from
-> declared inputs. It does not prove the absence of firmware implants,
-> compromised hardware roots of trust, or malicious maintainers with valid
-> signing authority. These threats require operational controls (key ceremony,
-> hardware trust policy, personnel/process controls), not software-only fixes.
-
-### Performance
-
-- Closure realization is replaced by pulling and mounting an [OCI] filesystem
-  image, dropping [CI] setup time from ~90 seconds (standard Nix cache fetch) to
-  \<10 seconds.
-- Setup cost scales with dependency change since the last seed.
-- Source fetch (shallow clone size) is unchanged.
-- Build execution time is unchanged.
-
-<!-- TODO: link actual job runs from the examples. -->
-
-#### Instrumentation
-
-Jobs are instrumented with [OpenTelemetry] spans for:
-
-- seed pull
-- mount ready
-- build start
-- seed build (when a new seed is required before the app build)
-- digest verification
-
-Primary metric: time-to-build (setup time).
-
-#### Comparisons
-
-Nix Seed generates CI workflows that benchmark setup-time against cache-based
-approaches (public binary cache, `actions/cache`) so the improvement is
-measurable, not assumed.
+Generates CI workflows for ./examples/ that benchmark setup-time against
+cache-based approaches (public binary cache, `actions/cache`) so the improvement
+is measurable, not assumed.
 
 The benchmark command is:
 
 - `nix develop --command true`
 
-#### Constraints
+### Instrumentation
 
-- Darwin builds must be run on macOS builders if they require Apple SDKs. A
-  runner with a differing SDK version produces a differing NAR digest and fails
-  deterministically.
+Jobs are instrumented with [OpenTelemetry] spans for:
 
-### Build Output
+- seed pull
+- mount ready
+- build start/end
+- post build: provenance/SBOM generation and signing
+- registry push: if outputting an OCI image
 
-Nix Seed's output is a Nix store path. The project build runs inside the seed
-container and writes its result to the local Nix store. The release pointer is
-the content-addressed digest of that output: a NAR digest for store path
-outputs, an OCI image digest for container outputs. The trust and attestation
-model is identical in both cases: the in-toto statement binds the output
-artifact digest, and (in Zero) that digest is anchored on-chain.
+Primary metric: time-to-build (setup time).
 
-For distribution, [Cachix](https://cachix.org/) provides a managed binary cache
-service for store path results. Cachix push credentials are a deployment secret,
-not a trust root. Container outputs are pushed to an OCI registry. Cachix is not
-required when all outputs are container images; it is recommended for store path
-outputs and dev shells.
+## Building the Seed
+
+Seed build is managed by the [Seed Action](./seed/action.yaml)
 
 Output references are system-qualified at evaluation time: `apps.default`
 resolves to `apps.x86_64-linux.default` on an x86_64-linux builder. All
@@ -91,10 +44,62 @@ configured outputs are built in parallel. Projects with large independent
 outputs should use separate CI jobs per output to distribute build load across
 dedicated runners.
 
+## Building from Seed
+
+Consuming projects maintains a `.seed.lock` containing a seed digest per target
+system:
+
+```json
+{
+  "aarch64-darwin": "sha256:...",
+  "aarch64-linux": "sha256:...",
+  "x86_64-darwin": "sha256:...",
+  "x86_64-linux": "sha256:..."
+}
+```
+
+If no digest exists for a system, [the seed is built](#building-the-seed), the
+resulting digest is recorded in a new commit containing the updated
+`.seed.lock`, and the normal build proceeds.
+
+Build runs inside the seed container as:
+
+```sh
+out=$(mktemp -d)
+docker run \
+  --network none \
+  --tmpfs /tmp \
+  --volume $out:/out \
+  --volume ${{ github.workspace }}:/src \
+  ghcr.io/${{ github.repository }}.seed:$SEED_DIGEST \
+  nix build --print-build-logs /src
+```
+
+The container's entrypoint overlays /out on /nix/store:
+
+```sh
+mkdir -p /tmp/work /tmp/merged
+mount -t overlay overlay \
+    -o lowerdir=/nix/store,upperdir=/out,workdir=/tmp/work \
+    /tmp/merged
+mount --bind /mnt/merged /nix/store
+exec /bin/bash "$@"
+```
+
+Post-build, the new paths are available in $out.
+
+After each build, an [in-toto] statement is generated describing inputs and
+build metadata, signed via [OIDC]/[KMS] using [cosign], logged to [Rekor], and
+For distribution, [Cachix](https://cachix.org/) provides a managed binary cache
+service for store path results. Cachix push credentials are a deployment secret,
+not a trust root. Container outputs are pushed to an OCI registry. Cachix is not
+required when all outputs are container images; it is recommended for store path
+outputs and dev shells.
+
 Nix store signing (`nix store sign`) attaches an [Ed25519] signature to each
 [narinfo] in the cache, binding the store path to the signer's key. A consumer
 configured with `trusted-public-keys` verifies the signature before accepting a
-substituted path. In Zero, store signing is complementary to the on-chain
+substituted path. In [Zero](#zero), store signing is complementary to the
 quorum: a compromised cache can serve a valid signature only if the signing key
 is also compromised, while the anchored digest provides an independent ground
 truth.
@@ -117,9 +122,9 @@ system under the same supply-chain trust model as all other dependencies.
 #### Seed Container
 
 The seed container is the primary example: a standard `nix2container` build that
-packages the project's dependency closure. It inherits all the properties above
-\- its layers are store paths, its release pointer is an OCI image digest, and it
-is stored in an OCI registry.
+packages Nix and the flake's dependency closure. It inherits all the properties
+above - its layers are store paths, its release pointer is an OCI image digest,
+and it is stored in an OCI registry.
 
 What distinguishes it is its purpose: it ships pre-built dependencies so the
 project build can start immediately. The project output - store path, container
@@ -130,74 +135,59 @@ model as everything it builds.
 
 **Build steps:**
 
-1. Evaluate the project's Nix closure.
-1. `nix2container` produces an OCI image whose layers correspond to store paths,
-   plus a metadata manifest containing the image digest.
+1. Evaluate the flake's Nix closure. For each flake output, collect inputs.
+1. Pass inputs to `nix2container` as image contents which produces an OCI image
+   whose layers correspond to store paths, plus a metadata manifest. digest.
 1. Push the image to an OCI registry.
 
-Seed builds are executed offline (`--network none`). Source retrieval MUST be
+Seeded builds are executed offline (`--network none`). Source retrieval MUST be
 pinned to a commit digest (never a mutable branch ref). `flake.lock` integrity
 is verified by Nix evaluation; mismatches fail by design.
 
-### Trust
+### Constraints
 
-#### Bootstrap Chain
+Darwin builds must be run on macOS builders if they require Apple SDKs. A runner
+with a differing SDK version produces a differing NAR digest and fails
+deterministically.
 
-> The source was clean, the build hermetic, but the compiler was pwned.
+## Trust Model
 
-The [Trusting Trust][trusting-trust] attack has no software fix. The only
-protection is a compiler chain that terminates at a human-auditable ground
-truth.
-
-The Nixpkgs chain builds through:
-
-- The initial binary, [stage0-posix](https://github.com/oriansj/stage0-posix), a
-  self-hosting assembler whose bootstrap binary is a few hundred bytes of
-  hex-encoded machine instructions - there is no opaque compiler binary to
-  trust.
-- [GNU Mes](https://www.gnu.org/software/mes/) - a minimal C compiler and Scheme
-  interpreter bootstrapped entirely from the assembler
-- [tcc](https://bellard.org/tcc/)
-- [gcc](https://gcc.gnu.org/)
-- [live-bootstrap](https://github.com/fosslinux/live-bootstrap).
-
-The entire chain is coordinated with
-[bootstrappable.org](https://bootstrappable.org/).
-
-**Cost is already paid.** Full source bootstrap exists in nixpkgs regardless of
-this project. Seed images cache its output: the first build after a seed update
-pays the bootstrap cost once; subsequent CI jobs pull pre-built layers.
-
-Consumers who need independent verification can rebuild from the stage0 binary,
-reproduce the full closure, and check the digest against the anchored value.
-This is a one-time audit activity that takes on the order of days of compute,
-not a per-release operation. The content-addressed layers provide a direct
-correspondence between what is pulled and what was built.
-
-#### Quorum
+### Innocent
 
 > [!WARNING]
 >
-> Reproducible builds are a hard prerequisite. Without reproducibility,
-> diverging digests are indistinguishable from a subverted build - the system
-> cannot determine which builder is correct and quorum fails permanently.
->
-> Verify with `nix build --check`. See
-> [reproducible-builds.org](https://reproducible-builds.org/).
+> Innocent depends on [Rekor] availability and external [OIDC] trust roots.
 
-Releases require N-of-M builder agreement on the image digest. No single build
-is trusted alone.
+Anchors trust on the Rekor public-good instance with a single builder.
+
+- Guarantee: None.
+- Attack Surface: Builder, Rekor, and Nix cache infra - all central actors, all
+  [.gov](./DESIGN.md#usa)-capturable.
+- Resiliency: Rekor has no SLA; downtime blocks build and verify.
+- Cost: Free.
+
+### Credulous
+
+> [!WARNING]
+>
+> Credulous depends on [Rekor] availability and external [OIDC] trust roots, and
+> the Master Builder, a central actor, to coordinate the promotion flow.
+
+#### Quorum
+
+Builds require N-of-M builder agreement on the output digest. No single build is
+trusted.
 
 Quorum is only meaningful if builders span independent failure domains:
 organization, jurisdiction, infrastructure, and identity issuer.
 
 **Signing identity independence** requires that no single operator controls the
-signing identities of multiple quorum builders. In Credulous, identity is
-established via OIDC issuer: GitHub Actions
+signing identities of multiple quorum builders. In [Credulous](#credulous),
+identity is established via OIDC issuer: GitHub Actions
 (`token.actions.githubusercontent.com`) and Azure Pipelines
 (`vstoken.dev.azure.com`) share a Microsoft-controlled issuer and do not satisfy
-identity independence when combined. In Zero, identity is established by
-registered contract key; OIDC issuer is not a factor.
+identity independence when combined. In [Zero](#zero), identity is established
+by registered contract key; OIDC issuer is not a factor.
 
 **Choosing N:** each of the N required builders should have a distinct
 `corporateParent`, `jurisdiction`, and signing identity. N >= 3 is a practical
@@ -206,48 +196,20 @@ forge a majority. Unanimous (M-of-M) is the strongest guarantee. See
 [`modules/seedcfg.nix`](modules/seedcfg.nix) and
 [`modules/builders.nix`](modules/builders.nix) for the builder registry schema.
 
-**Timing:** in Credulous with N-of-M and a deadline, a party controlling M-N
-builders can delay attestation to ensure the deciding N-th vote comes from a
-builder of their choice. Zero eliminates this: attestations accumulate
-indefinitely and quorum is declared when the threshold is met, not when a timer
-expires.
+**Timing:** in [Credulous](#credulous) with N-of-M and a deadline, a party
+controlling M-N builders can delay attestation to ensure the deciding N-th vote
+comes from a builder of their choice. [Zero](#zero) eliminates this:
+attestations accumulate indefinitely and quorum is declared when the threshold
+is met, not when a timer expires.
 
 Disagreement among builders is not a bug - it is the protocol. Release is
 blocked until quorum agrees on the same digest.
 
-#### Levels
-
-##### Innocent
-
-Single builder.
-
-##### Credulous
-
-> [!WARNING]
->
-> Credulous depends on [Rekor] availability and external [OIDC] trust roots.
-> N-of-M quorum requires a central actor, the "master builder", to coordinate
-> the promotion flow.
-
-Each project maintains a `.seed.lock` containing a digest per target system:
-
-```json
-{
-  "aarch64-darwin": "sha256:...",
-  "aarch64-linux": "sha256:...",
-  "x86_64-darwin": "sha256:...",
-  "x86_64-linux": "sha256:..."
-}
-```
-
-If no digest exists for a system, the seed is built, the resulting digest is
-recorded in a new commit containing the updated `.seed.lock`, and the normal
-build proceeds.
-
-After each build, an [in-toto] statement is generated describing inputs and
-build metadata, signed via [OIDC]/[KMS] using [cosign], logged to [Rekor], and
 published to the registry as a referrer artifact keyed by the build result
 digest. No mutable registry state is trusted.
+
+When quorum is reached, the Master Builder creates a signed git tag (format
+configurable) on the source commit.
 
 An SBOM (SPDX or CycloneDX) is generated from the output closure and published
 as an OCI referrer artifact alongside the in-toto statement. This applies to
@@ -279,19 +241,13 @@ At minimum, the statement must bind:
 > [!NOTE]
 >
 > Builder cache configuration ([substituters][substituter]) is not attested in
-> Credulous. Two builders both substituting from the same cache (e.g.
-> `cache.nixos.org`) are trusting the cache operator rather than independently
-> building.
+> [Credulous](#credulous). Two builders both substituting from the same cache
+> (e.g. `cache.nixos.org`) are trusting the cache operator rather than
+> independently building.
 
-##### Zero
+### Zero
 
-> The Mental Model: Think of Credulous as a high-speed local cache for your
-> daily CI. Think of Zero as a global Clearing House for your software. The
-> Ethereum L2 acts as the decentralized ledger where multiple independent
-> auditors (builders) must mathematically agree on the output before a release
-> is allowed to "clear."
-
-###### No Substitutions
+#### No Substitutions
 
 > [!WARNING]
 >
@@ -312,16 +268,66 @@ At minimum, the statement must bind:
 > long-running instances) to complete the "Epoch Build." Subsequent CI jobs for
 > application code changes will return to near-zero setup times via the
 > pre-built OCI layers.
+
+#### Contract Governance
+
+- Governance multi-sig must be independent from builder keys.
+- Threshold should be at least 2-of-3 for emergency revocation/rotation.
+- If keys are lost post-finalization such that the multi-sig drops below the
+  rotation threshold (e.g., 2-of-3), the L2 contract is permanently bricked and
+  requires a hard fork to a new contract.
+- If a builder is revoked post-genesis, re-evaluate affected releases and
+  republish status.
+
+#### Configuration
+
+The contract is the authoritative source for all verification parameters:
+builder set, registered keys, N, M, and independence constraints
+(`corporateParent`, `jurisdiction`, infrastructure).
+
+The flake's `seedCfg` is a local declaration used for [Credulous](#credulous)
+only. It should be pruned when moving to [Zero](#zero).
+
+Changes take effect only when a governance transaction updates the contract,
+requiring approval from the governance multi-sig.
+
+Repo write access does not confer the ability to redefine the trust model.
+
+#### Genesis
+
+The first seed has no prior quorum to bootstrap from. Genesis is a controlled
+ceremony distinct from normal builds:
+
+1. All configured builders (M-of-M, unanimous) build the seed independently from
+   source.
+1. Each builder submits a genesis attestation to the contract via their
+   registered key.
+1. The contract requires unanimous attestation and verifies full independence
+   across all M builders before accepting the genesis root.
+1. Genesis is finalized by a multi-signature transaction requiring all M builder
+   keys; no single party can unilaterally declare genesis.
+1. An empty contract state rejects all non-genesis builds. Genesis must be
+   completed before any seed can be consumed.
+
+Post-genesis builds use the standard N-of-M threshold. The genesis root is the
+immutable trust anchor.
+
+Operationally, deployments MUST maintain incident runbooks for: key loss,
+builder unavailability, builder compromise/revocation, and emergency quorum
+reconfiguration.
+
+> [!NOTE]
 >
+> Air-gapping builder hardware during the genesis ceremony eliminates the risk
+> of network-level attacks on the trust anchor. This is best practice but
+> expensive. Firmware injection remains a risk.
+
 > [!NOTE]
 >
 > The L2 contract maintains a builder revocation list. If a builder is
 > retroactively found compromised, its identity is added to the list; the
 > contract excludes its attestations from quorum counting. Prior seed releases
 > that relied on the revoked builder should be re-evaluated.
-
-<!-- AGENT: Builder federations work together to share the load and increase the
---> <!-- quorum? -->
 
 A *seed release* is a set of image digests, one per target system. This is
 distinct from a project release (git tag); a project release may reference one
@@ -426,10 +432,10 @@ promotes a release when quorum is met - no coordinator, no single point of
 authority.
 
 **Key management:** builder keys are persistent secrets held in CI secret
-stores. In Zero, signing keys SHOULD be non-exportable and backed by HSM/KMS-HSM
-class infrastructure if costs permit. Raw private keys stored directly in CI
-secret stores are NOT RECOMMENDED for Zero. Compromise triggers revocation via
-the contract's governance [multi-sig] (see
+stores. In [Zero](#zero), signing keys SHOULD be non-exportable and backed by
+HSM/KMS-HSM class infrastructure if costs permit. Raw private keys stored
+directly in CI secret stores are NOT RECOMMENDED for [Zero](#zero). Compromise
+triggers revocation via the contract's governance [multi-sig] (see
 [Governance Constraints](#governance-constraints)).
 
 **Why CI key compromise still matters:** the contract verifies that `N` distinct
@@ -475,66 +481,7 @@ The `.seed.lock` file is not used.
 Contract quorum verification subsumes the Rekor log check. In-toto provenance is
 verified separately via the OCI artifact.
 
-###### Configuration Registry
-
-The contract is the authoritative source for all verification parameters:
-builder set, registered keys, N, M, and independence constraints
-(`corporateParent`, `jurisdiction`, infrastructure).
-
-The flake's `seedCfg` is a local declaration used for Credulous only. It should
-be pruned when moving to Zero.
-
-Changes take effect only when a governance transaction updates the contract,
-requiring approval from the governance multi-sig (see
-[Governance Constraints](#governance-constraints)).
-
-This closes the obvious attack: repo write access does not confer the ability to
-redefine the trust model. Genesis (below) is the ceremony that populates the
-registry for the first time.
-
-###### RPC availability
-
-Contract reads are `eth_call` (view functions) - no transaction, no gas,
-50-300ms on a reliable L2 RPC provider. Not a CI bottleneck. The real concern is
-availability: if the RPC is down, verification fails closed and builds stop.
-Mitigations:
-
-- Configure multiple RPC endpoints; fail through to a secondary on error.
-- Cache the last known Merkle root locally with its block number; re-fetch on
-  block advance.
-- Apply the same jurisdiction independence requirement to RPC providers as to
-  builders: a single US-provider RPC is a single failure domain.
-
-###### Genesis
-
-The first seed has no prior quorum to bootstrap from. Genesis is a controlled
-ceremony distinct from normal builds:
-
-1. All configured builders (M-of-M, unanimous) build the seed independently from
-   source.
-1. Each builder submits a genesis attestation to the contract via their
-   registered key.
-1. The contract requires unanimous attestation and verifies full independence
-   across all M builders before accepting the genesis root.
-1. Genesis is finalized by a multi-signature transaction requiring all M builder
-   keys; no single party can unilaterally declare genesis.
-1. An empty contract state rejects all non-genesis builds. Genesis must be
-   completed before any seed can be consumed.
-
-Post-genesis builds use the standard N-of-M threshold. The genesis root is the
-immutable trust anchor.
-
-Operationally, deployments MUST maintain incident runbooks for: key loss,
-builder unavailability, builder compromise/revocation, and emergency quorum
-reconfiguration.
-
-> [!NOTE]
->
-> Air-gapping builder hardware during the genesis ceremony eliminates the risk
-> of network-level attacks on the trust anchor. This is best practice but
-> expensive. Firmware injection remains a risk.
-
-###### Gas Costs
+#### Gas Costs
 
 [Gas] cost depends on [calldata] size, state writes, and current L2 fee
 conditions. The ranges below are planning estimates for a quorum of 3 builders
@@ -555,32 +502,34 @@ across 4 systems (`aarch64-darwin`, `aarch64-linux`, `x86_64-darwin`,
   - expected cost: 0.00009 to 0.00032 ETH
   - expected USD (ETH = $3,000): $0.27 to $0.96
 
-Total anchoring overhead per release: 0.00081 to 0.00296 ETH ($2.43 to $8.88 at
-ETH = $3,000), excluding unusual fee spikes.
+Total anchoring overhead per release: Ξ0.001-Ξ0.003 ($3-$9 @ Ξ1=$3k), excluding
+unusual fee spikes.
 
-###### Governance Constraints
+#### RPC availability
 
-- Governance multi-sig must be independent from builder keys.
-- Threshold should be at least 2-of-3 for emergency revocation/rotation.
-- If a genesis key is lost before finalization, restart genesis with a new
-  builder set and publish a signed incident record.
-- If keys are lost post-finalization such that the multi-sig drops below the
-  rotation threshold (e.g., 2-of-3), the L2 contract is permanently bricked for
-  that project and requires a hard fork to a new contract.
-- If a builder is revoked post-genesis, re-evaluate affected releases and
-  republish status.
+Contract reads are `eth_call` (view functions) - no transaction, no gas,
+50-300ms on a reliable L2 RPC provider. Not a CI bottleneck. The real concern is
+availability: if the RPC is down, verification fails closed and builds stop.
+Mitigations:
 
-## Implicit Trust Boundary
+- Configure multiple RPC endpoints; fail through to a secondary on error.
+- Cache the last known Merkle root locally with its block number; re-fetch on
+  block advance.
+- Apply the same jurisdiction independence requirement to RPC providers as to
+  builders: a single US-provider RPC is a single failure domain.
+
+## Implicit Boundaries
+
+### Trust
 
 While the design mitigates many attack vectors, it relies on two fundamental
 trust assumptions:
 
 1. **The `flake.lock` Bottleneck:** Nix Seed guarantees *what is in git is what
-   is built*. If a maintainer merges a malicious dependency update into
-   `flake.lock`, Nix Seed will faithfully build, attest, and anchor the malware.
-   The cryptographic system does not audit code intent; it only binds the output
-   to the input. Human review of lockfile updates remains a critical security
-   boundary.
+   is built*. If a maintainer merges a malicious dependency update, Nix Seed
+   will faithfully build, attest, and anchor the malware. The cryptographic
+   system does not audit code intent; it only binds the output to the input.
+   Human review of lockfile updates remains a critical security boundary.
 1. **Registry Tampering:** The OCI registry is treated as an untrusted blob
    store. The trust boundary assumes the local OCI client (Docker/Podman/
    Skopeo) correctly verifies that the digest of the fetched content matches the
@@ -605,7 +554,17 @@ technical control. Key ceremony discipline and [HSM]-resident keys limit insider
 blast radius: an insider can attest a bad build, but cannot retroactively forge
 the quorum.
 
-## Project Attack Surface
+### Guarantee
+
+Nix Seed verifies reproducibility and provenance from declared inputs. It does
+not prove the absence of firmware implants, compromised hardware roots of trust,
+or malicious maintainers with valid signing authority. These threats require
+operational controls (key ceremony, hardware trust policy, personnel/process
+controls), not software-only fixes.
+
+## Meta
+
+### Attack Surface
 
 This project is intentionally low-code: it mainly defines build policy,
 verification rules, and workflow wiring around existing Nix container systems.
@@ -616,23 +575,22 @@ The primary risk is **misconfiguration**, not complex code execution. The
 highest-impact failure modes are:
 
 - weak quorum/independence configuration
-- enabling [substituters][substituter] in [L2] mode
-- trusting unsigned or under-specified [attestations][attestation]
+- enabling [substituters][substituter] in Zero mode
 - insecure key handling in CI
 
 Security work should prioritize strict defaults, immutable references,
 verification-by-default, and auditable configuration.
 
-## Governance
+### Governance
 
-This project aims to become part of the
-[nix-community](https://github.com/nix-community). Nix Community hosts projects
-under [shared ownership](https://nix-community.org/), supporting multi-person
+This project aims to join the [nix-community](https://github.com/nix-community).
+Nix Community hosts projects under
+[shared ownership](https://nix-community.org/), supporting multi-person
 authorisation over releases and repository access. This aligns with the trust
 model: the project's own supply chain is subject to the same independence
 constraints it imposes on its users.
 
-## Versioning
+### Versioning
 
 Releases are tagged twice: once as `N` (e.g. `1`) and once as `vN` (e.g. `v1`),
 both pointing to the same commit. The `v` prefix is a cargo-cult convention
@@ -641,32 +599,37 @@ The canonical tag is `N`. The `vN` alias exists because GitHub Actions consumers
 expect it - `uses: org/repo@v1` is the pattern every GHA user has memorised.
 Both refs resolve identically.
 
+## Future Work / Out of Scope
+
+### Federated Builders
+
+In theory, independent organisations could federate builders to share the cost
+of the full-source nixpkgs toolchain bootstrap required by [Zero](#zero). See
+the [No Substitutions](#no-substitutions) warning: each builder must rebuild the
+full closure from source, so a nixpkgs bump is an expensive, repeated hit across
+every independent builder.
+
+A federation could coordinate a single nixpkgs bump and let quorum be based on
+the federated set, reducing repeated work across members while preserving Nix
+Seed's explicit guarantees and independence between organisations.
+
 ## Compliance
 
 Seed images fully respect upstream licences prohibiting redistribution. Seed
-images do not contain the Apple SDK, they reference it at build time and on
-macOS hosts.
+images do not include the Apple SDK, they reference it at build time on macOS
+hosts.
 
-[attestation]: https://slsa.dev/attestation-model
 [calldata]: https://ethereum.org/en/developers/docs/transactions/
-[ci]: https://en.wikipedia.org/wiki/Continuous_integration
-[closure]: https://nix.dev/manual/nix/stable/glossary#gloss-closure
-[cosign]: https://docs.sigstore.dev/cosign/overview/
 [ed25519]: https://ed25519.cr.yp.to/
 [gas]: https://ethereum.org/en/developers/docs/gas/
 [hsm]: https://en.wikipedia.org/wiki/Hardware_security_module
 [humint]: https://en.wikipedia.org/wiki/Human_intelligence_(intelligence_gathering)
 [in-toto]: https://in-toto.io/
-[kms]: https://csrc.nist.gov/pubs/sp/800/57/pt1/r5/final
-[l2]: https://ethereum.org/en/layer-2/
 [merkle-root]: https://en.wikipedia.org/wiki/Merkle_tree
 [multi-sig]: https://en.wikipedia.org/wiki/Threshold_cryptosystem
 [narinfo]: https://nix.dev/manual/nix/stable/package-management/binary-cache-substituter
-[oci]: https://opencontainers.org/
-[oci-registry]: https://github.com/opencontainers/distribution-spec
 [oidc]: https://openid.net/connect/
 [opentelemetry]: https://opentelemetry.io/
 [rekor]: https://github.com/sigstore/rekor
 [sla]: https://en.wikipedia.org/wiki/Service-level_agreement
 [substituter]: https://nix.dev/manual/nix/stable/command-ref/conf-file#conf-substituters
-[trusting-trust]: https://dl.acm.org/doi/10.1145/358198.358210

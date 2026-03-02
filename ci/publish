@@ -2,37 +2,25 @@
 
 set -euo pipefail
 
-# {{{ defaults
-
-# work out if we're on a CI runner
-CI=
-if [[ -n ${GITHUB_SHA:-} ]]; then
-  CI=1
-fi
-
-predicateType=https://github.com/0compute/nix-seed
-registry=ghcr.io
-result=./result
-rekorUrl=https://rekor.sigstore.dev
-
-# }}}
-
 # {{{ getopt
+
+result=./result
+seedAttr=seed
+registry=ghcr.io
 
 usage() {
   cat <<EOF
 Usage:
   publish IMAGE_NAME COMMIT_SHA
 Options:
-  --tag TAG            add an extra tag such as IMAGE_NAME:latest
+  --result RESULT
+    path to a container tarball (default: $result)
+  --seed-attr SEED_ATTR
+    name of the seed package attr (default: $seedAttr)
   --registry REGISTRY
-    registry to log into and use for pushing (default: $registry)
-  --result RESULT      path to an existing docker load input (default: $result)
-  --builder-identity ID
-    explicit builder identity if it differs from context
-  --predicate-type TYPE
-    cosign predicate type for the attestation (default: $predicateType)
-  --rekor-url URL       Rekor endpoint to log attestations (default: $rekorUrl)
+    target registry (default: $registry)
+  --tag TAG
+    add an extra tag such as IMAGE_NAME:latest
 Args:
   IMAGE_NAME  repository to push (e.g., ghcr.io/org/nix-seed)
   COMMIT_SHA  git commit SHA for verification
@@ -42,7 +30,7 @@ EOF
 PARSED=$(
   getopt \
     --options '' \
-    --long tag:,registry:,result:,predicate-type:,builder-identity:,rekor-url: \
+    --long result:,seed-attr:,registry:,tag: \
     -- "$@"
 ) || {
   usage
@@ -50,37 +38,24 @@ PARSED=$(
 }
 eval set -- "$PARSED"
 
-builderIdentity=
 tags=()
 while true; do
   case "$1" in
-  --tag)
-    tags+=("$2")
+  --result)
+    result=$2
+    shift 2
+    ;;
+  --seed-attr)
+    seedAttr=$2
     shift 2
     ;;
   --registry)
     registry=$2
     shift 2
     ;;
-  --result)
-    result=$2
+  --tag)
+    tags+=("$2")
     shift 2
-    ;;
-  --predicate-type)
-    predicateType=$2
-    shift 2
-    ;;
-  --builder-identity)
-    builderIdentity=$2
-    shift 2
-    ;;
-  --rekor-url)
-    rekorUrl=$2
-    shift 2
-    ;;
-  --)
-    shift
-    break
     ;;
   *)
     usage
@@ -97,6 +72,18 @@ fi
 name=$1
 commit=$2
 image="$name:$commit"
+
+# identity: tries env vars then falls back to user@host
+for candidate in BUILDER_IDENTITY GITHUB_ACTOR; do
+  value=${!candidate:-}
+  if [[ -n $value ]]; then
+    builderIdentity=$value
+    break
+  fi
+done
+if [[ -z ${builderIdentity:-} ]]; then
+  builderIdentity=$(whoami)@$(hostname --fqdn)
+fi
 
 # }}}
 
@@ -126,6 +113,10 @@ podman login \
   --password-stdin "$registry" \
   <<<"$REGISTRY_PASS"
 
+# work out if we're on a CI runner
+CI=
+[[ -z ${GITHUB_SHA:-} ]] || CI=1
+
 # tag and push, for CI do the push in one go
 tags+=(
   "$commit"
@@ -142,36 +133,24 @@ done
 
 # {{{ attest
 
+system=$(nix eval --raw ".#$seedAttr.system")
+
 predicate="./$commit.$system.json"
-
-system=$(nix eval --raw ".#seed.system")
-
-# identity, if not supplied tries a few env vars then falls back to user@host
-if [[ -z $builderIdentity ]]; then
-  for candidate in BUILDER_IDENTITY GITHUB_ACTOR; do
-    value=${!candidate:-}
-    if [[ -n $value ]]; then
-      builderIdentity=$value
-      break
-    fi
-  done
-fi
-if [[ -z ${builderIdentity} ]]; then
-  builderIdentity=$(whoami)@$(hostname --fqdn)
-fi
 
 cat <<EOF >"$predicate"
 {
   "schemaVersion": 1,
-  "predicateType": "$predicateType",
+  "predicateType": "https://github.com/0compute/nix-seed",
   "timestamp": "$(date --utc +'%Y-%m-%dT%H:%M:%SZ')",
-  "image": "$(podman inspect --format='{{index .RepoDigests 0}}' "$image")",
-  "registry": "$registry",
-  "commit": "$commit",
   "system": "$system",
+  "gitHash": "$commit",
   "narHash": "$(
   nix path-info --json --json-format 1 "$result" | jq --raw-output '.[].narHash'
 )",
+  # TODO: look in ./result json for this
+  # XXX: redundant with
+  "imageHash": "$(podman inspect --format='{{index .RepoDigests 0}}' "$image")",
+  "registry": "$registry",
   "layerHashes": $(
   tar --extract --file "$result" --to-stdout manifest.json |
     jq --raw-output '.[0].Layers | map(split("/")[0]) | @json'
@@ -194,8 +173,7 @@ EOF
 echo "wrote: $predicate"
 
 cosign attest \
-  --rekor-url "$rekorUrl" \
-  --type "$predicateType" \
+  --rekor-url "$(nix eval --raw .#seedCfg.rekor.url)" \
   --predicate "$predicate" \
   "$image"
 

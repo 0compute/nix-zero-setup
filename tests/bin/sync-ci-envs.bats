@@ -87,8 +87,8 @@ setup() {
   assert_status 0
   assert_output_contains "synced circleci:FOO"
   assert_file_contains "${LOG_DIR}/curl.log" "Circle-Token: token"
-  assert_file_contains "${LOG_DIR}/curl.log" "\"name\":\"FOO\""
-  assert_file_contains "${LOG_DIR}/curl.log" "\"value\":\"bar\""
+  assert_file_contains "${LOG_DIR}/curl.log" '"name":"FOO"'
+  assert_file_contains "${LOG_DIR}/curl.log" '"value":"bar"'
 }
 
 @test "sync-ci-envs appveyor requires token account slug" {
@@ -113,8 +113,8 @@ setup() {
     "https://ci.appveyor.com/api/projects/org/repo"
   assert_file_contains "${LOG_DIR}/curl.log" \
     "settings/environment-variables"
-  assert_file_contains "${LOG_DIR}/curl.stdin.1" "\"name\":\"FOO\""
-  assert_file_contains "${LOG_DIR}/curl.stdin.1" "\"isSecured\":false"
+  assert_file_contains "${LOG_DIR}/curl.stdin.1" '"name":"FOO"'
+  assert_file_contains "${LOG_DIR}/curl.stdin.1" '"isSecured":false'
 }
 
 @test "sync-ci-envs rejects unsupported provider" {

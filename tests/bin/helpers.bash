@@ -24,20 +24,20 @@ write_curl_stub() {
     count_file="${LOG_DIR}/curl.count"
 
     count=0
-    if [[ -f "$count_file" ]]; then
-      count=$(< "$count_file")
+    if [[ -f $count_file ]]; then
+      count=$(<"$count_file")
     fi
 
     count=$((count + 1))
-    printf '%s' $count > "$count_file"
-    printf '%s\n' "$*" >> "$log_file"
+    printf '%s' $count >"$count_file"
+    printf '%s\n' "$*" >>"$log_file"
 
     if [[ " $* " == *" --data @- "* ]]; then
       input=$(</dev/stdin)
-      printf '%s' "$input" > "${LOG_DIR}/curl.stdin.${count}"
+      printf '%s' "$input" >"${LOG_DIR}/curl.stdin.${count}"
     fi
 
-    if [[ "${CURL_FAIL_METHOD-}" == "PUT" ]]; then
+    if [[ ${CURL_FAIL_METHOD-} == "PUT" ]]; then
       if [[ " $* " == *" --request PUT "* ]]; then
         return 1
       fi
@@ -56,7 +56,7 @@ assert_status() {
 
 assert_output_contains() {
   local needle=$1
-  if [[ "$output" != *"$needle"* ]]; then
+  if [[ $output != *"$needle"* ]]; then
     printf 'expected output to contain %s\n' "$needle" >&2
     return 1
   fi
@@ -76,6 +76,6 @@ file_line_count() {
   local count=0
   while IFS= read -r _; do
     count=$((count + 1))
-  done < "$path"
+  done <"$path"
   printf '%s\n' $count
 }

@@ -10,15 +10,15 @@ setup() {
 
 write_jq_stub() {
   jq() {
-    if [[ "$#" -lt 2 ]]; then
+    if [[ $# -lt 2 ]]; then
       return 1
     fi
-    if [[ "$1" == "--raw-output" ]] || [[ "$1" == "-r" ]]; then
+    if [[ $1 == "--raw-output" ]] || [[ $1 == "-r" ]]; then
       shift
     fi
     shift
     for file in "$@"; do
-      content=$(< "$file")
+      content=$(<"$file")
       value=${content#*\"containerDigest\":\"}
       value=${value%%\"*}
       printf '%s\n' "$value"
@@ -30,7 +30,7 @@ write_jq_stub() {
 write_oras_stub() {
   oras() {
     log_file="${LOG_DIR}/oras.log"
-    printf '%s\n' "$*" >> "$log_file"
+    printf '%s\n' "$*" >>"$log_file"
   }
   export -f oras
 }
@@ -38,7 +38,7 @@ write_oras_stub() {
 write_skopeo_stub() {
   skopeo() {
     log_file="${LOG_DIR}/skopeo.log"
-    printf '%s\n' "$*" >> "$log_file"
+    printf '%s\n' "$*" >>"$log_file"
   }
   export -f skopeo
 }
@@ -46,15 +46,15 @@ write_skopeo_stub() {
 write_uname_stub() {
   uname() {
     case "${1-}" in
-      -m)
-        printf '%s\n' "x86_64"
-        ;;
-      -s)
-        printf '%s\n' "Linux"
-        ;;
-      *)
-        printf '%s\n' "Linux"
-        ;;
+    -m)
+      printf '%s\n' "x86_64"
+      ;;
+    -s)
+      printf '%s\n' "Linux"
+      ;;
+    *)
+      printf '%s\n' "Linux"
+      ;;
     esac
   }
   export -f uname
@@ -71,7 +71,7 @@ write_tr_stub() {
 write_attestation() {
   local path=$1
   local digest=$2
-  printf '%s\n' "{\"containerDigest\":\"${digest}\"}" > "$path"
+  printf '%s\n' "{\"containerDigest\":\"${digest}\"}" >"$path"
 }
 
 make_attestations() {
@@ -174,7 +174,7 @@ make_attestations() {
   make_attestations "$dir" "sha256:same" "sha256:same"
   run "$BASH_BIN" "$SCRIPT" "image" "-d" "$dir" "-A"
   assert_status 0
-  if [[ "$output" == *"attach skipped"* ]]; then
+  if [[ $output == *"attach skipped"* ]]; then
     printf '%s\n' "unexpected attach skipped" >&2
     return 1
   fi

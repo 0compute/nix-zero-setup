@@ -23,14 +23,26 @@ jobs:
       id-token: write
       # allow push to registry
       packages: write
+
     steps:
+
+      - name: Set trace-start
+        id: set-trace-start
+        run: echo "trace-start=$(date +%s)" >> $GITHUB_OUTPUT
+      - uses: honeycombio/gha-buildevents@v3
+        with:
+          apikey: ${{ secrets.BUILDEVENT_APIKEY }}
+          dataset: ${{ env.HONEYCOMB_DATASET }}
+          # matrix-key: ${{ matrix.value }}
+
       - name: Checkout
         uses: actions/checkout@v6
+
       - name: Build seed
         uses: ./.
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          # TODO: tag should be done by after check
+          # FIXME: tag should be done after check
           tags: latest
 
   check:
@@ -39,4 +51,26 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/checkout@v6
-      - run: nix flake check --print-build-logs
+      - run: |-
+          docker run \
+            --network none \
+            --tmpfs /tmp \
+            --volume ${{ github.workspace }}:/src \
+            ghcr.io/${{ github.repository }}.seed:${{ github.sha }} \
+            nix flake check --print-build-logs /src
+
+  trace:
+    runs-on: ubuntu-latest
+    needs: check
+    if: ${{ always() }}
+    permissions:
+      actions: read
+    steps:
+      - uses: technote-space/workflow-conclusion-action@v3
+      - uses: honeycombio/gha-buildevents@v2
+        with:
+          apikey: ${{ secrets.BUILDEVENT_APIKEY }}
+          dataset: ${{ env.HONEYCOMB_DATASET }}
+          status: ${{ env.WORKFLOW_CONCLUSION }}
+          trace-start: ${{ needs.seed.outputs.trace-start}}
+          # matrix-key: ${{ matrix.value }}

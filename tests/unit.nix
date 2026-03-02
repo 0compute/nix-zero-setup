@@ -2,13 +2,14 @@
 let
 
   results = pkgs.lib.runTests {
-  testEnvConfig = {
-    expr =
-      pkgs.lib.sort (left: right: left < right)
-        (mkSeed {
-          inherit pkgs;
-          nixConf = "extra-features = nix-command";
-        }).config.Env;
+
+    testEnvConfig = {
+      expr =
+        pkgs.lib.sort (left: right: left < right)
+          (mkSeed {
+            inherit pkgs;
+            nixConf = "extra-features = nix-command";
+          }).config.Env;
       expected = pkgs.lib.sort (left: right: left < right) [
         "USER=root"
         "GIT_TEXTDOMAINDIR=${pkgs.git}/share/locale"
@@ -29,19 +30,21 @@ let
         )
         (
           "PATH="
-          + (toString (builtins.path { path = ./../bin; name = "bin"; }))
+          + (toString (
+            builtins.path {
+              path = ./../bin;
+              name = "bin";
+            }
+          ))
           + ":/bin:/usr/bin:/sbin:/usr/sbin"
         )
       ];
     };
 
-  testDefaultName = {
-    expr =
-      (mkSeed {
-        inherit pkgs;
-      }).name;
-    expected = "unnamed-seed.tar.gz";
-  };
+    testDefaultName = {
+      expr = (mkSeed { inherit pkgs; }).name;
+      expected = "unnamed-seed.tar.gz";
+    };
 
     testCustomName = {
       expr =
@@ -61,11 +64,7 @@ let
       in
       {
         expr = seed.contents;
-        expected =
-          seed.corePkgs
-          ++ (with pkgs; [
-            jq
-          ]);
+        expected = seed.corePkgs ++ (with pkgs; [ jq ]);
       };
   };
 in

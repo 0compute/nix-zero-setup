@@ -1,10 +1,9 @@
 # Functional test for nix-seed seed image
 # Validates that the seed can run Nix commands and evaluate flakes
-machine.wait_for_unit("docker.service")
-machine.succeed("docker load < @img@")
+machine.succeed("podman load < @img@")
 
 # verify Nix is available and functional in the seed
-machine.succeed("docker run --rm --entrypoint nix @tag@ --version")
+machine.succeed("podman run --rm --entrypoint nix @tag@ --version")
 
 # create a minimal Nix project to build inside the seed
 machine.succeed("mkdir -p /tmp/test-project")
@@ -18,7 +17,7 @@ machine.succeed("cd /tmp/test-project && git init && git add .")
 machine.succeed(
     " ".join(
         (
-            "docker run",
+            "podman run",
             "--rm",
             "-v /tmp/test-project:/src",
             "-w /src",

@@ -1,0 +1,82 @@
+{ inputs, ... }:
+{
+
+  imports = [ inputs.github-actions-nix.flakeModule ];
+
+  flake.githubActions = {
+
+    enable = true;
+
+    workflows.seed = {
+
+      name = "Seed";
+
+      on = {
+        push = { };
+        pullRequest = { };
+      };
+
+      jobs = {
+
+        build = {
+          runsOn = "ubuntu-latest";
+          permissions = {
+            # allow checkout and other read-only ops; this is the default
+            # but specifying a permissions block drops defaults back to
+            # `none`
+            contents = "read";
+            # minting an OIDC token lets COSIGN_EXPERIMENTAL=1 keep cosign
+            # signing non-interactive instead of invoking the device flow.
+            id-token = "write";
+            # allow push to registry
+            packages = "write";
+          };
+          steps = [
+            {
+              name = "Checkout";
+              uses = "actions/checkout@v6";
+            }
+            {
+              name = "Build Seed";
+              uses = "./.";
+              "with" = {
+                github_token = "$${{ secrets.GITHUB_TOKEN }}";
+                # TODO: tag should be done by after check
+                tags = "latest";
+              };
+            }
+          ];
+        };
+
+        check = {
+          runsOn = "ubuntu-latest";
+          container = "ghcr.io/$${{ github.repository }}:$${{ github.sha }}";
+          "if" = "$${{ github.event.workflow_run.conclusion == 'success' }}";
+          steps = [
+            {
+              name = "Checkout";
+              uses = "actions/checkout@v6";
+            }
+            {
+              name = "Check";
+              # NOTE: `--network none`: the build should never need net, this
+              # is a safety net for broken seeds
+              # FIXME: ghcr hard-coded
+              run = ''
+                docker run \
+                  --network none \
+                  --volume $${{ github.workspace }}:/src \
+                  ghcr.io/$${{ github.repository }}:$${{ github.sha }} \
+                  nix flake check --print-build-logs /src
+              '';
+            }
+          ];
+        };
+
+      };
+
+    };
+
+  };
+
+}

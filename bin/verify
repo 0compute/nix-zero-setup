@@ -37,26 +37,51 @@ dry_run=false
 arch=$(uname -m)
 os=$(uname -s | tr 'A-Z' 'a-z')
 
-while (( "$#" )); do
+while (("$#")); do
   case "$1" in
-    -d) attest_dir=$2; shift 2 ;;
-    -r) required=$2; shift 2 ;;
-    -A) attach=true; shift ;;
-    -a) attach=true; annotate=true; shift ;;
-    --arch) arch=$2; shift 2 ;;
-    --os) os=$2; shift 2 ;;
-    --dry-run) dry_run=true; shift ;;
-    *) usage; exit 1 ;;
+  -d)
+    attest_dir=$2
+    shift 2
+    ;;
+  -r)
+    required=$2
+    shift 2
+    ;;
+  -A)
+    attach=true
+    shift
+    ;;
+  -a)
+    attach=true
+    annotate=true
+    shift
+    ;;
+  --arch)
+    arch=$2
+    shift 2
+    ;;
+  --os)
+    os=$2
+    shift 2
+    ;;
+  --dry-run)
+    dry_run=true
+    shift
+    ;;
+  *)
+    usage
+    exit 1
+    ;;
   esac
 done
 
 command -v jq >/dev/null
 command -v oras >/dev/null
-if [[ "${annotate}" == true ]]; then
+if [[ ${annotate} == true ]]; then
   command -v skopeo >/dev/null
 fi
 
-if [[ ! -d "${attest_dir}" ]]; then
+if [[ ! -d ${attest_dir} ]]; then
   echo "attestations dir missing: ${attest_dir}" >&2
   exit 1
 fi
@@ -65,13 +90,13 @@ shopt -s nullglob
 files=("${attest_dir}"/*.json)
 shopt -u nullglob
 
-if [[ ${#files[@]} -lt "${required}" ]]; then
+if [[ ${#files[@]} -lt ${required} ]]; then
   echo "insufficient attestations: found ${#files[@]}, need ${required}" >&2
   exit 1
 fi
 
 digest_count=$(jq -r '.containerDigest' "${files[@]}" | sort -u | wc -l)
-if [[ "${digest_count}" -ne 1 ]]; then
+if [[ ${digest_count} -ne 1 ]]; then
   echo "digest mismatch across attestations" >&2
   exit 1
 fi
@@ -79,7 +104,7 @@ fi
 digest=$(jq -r '.containerDigest' "${files[@]}" | head -1)
 echo "verified ${#files[@]} attestations for ${digest}"
 
-if [[ "${attach}" != true ]] || [[ "${dry_run}" == true ]]; then
+if [[ ${attach} != true ]] || [[ ${dry_run} == true ]]; then
   echo "attach skipped"
   exit 0
 fi
@@ -91,7 +116,7 @@ for f in "${files[@]}"; do
     "${f}:application/json"
 done
 
-if [[ "${annotate}" == true ]]; then
+if [[ ${annotate} == true ]]; then
   args=(
     --format oci
     --add-annotation org.opencontainers.image.attestation=application/json
@@ -99,7 +124,7 @@ if [[ "${annotate}" == true ]]; then
   for pair in "arch:${arch}" "os:${os}"; do
     key=${pair%%:*}
     value=${pair#*:}
-    if [[ -n "${value}" ]]; then
+    if [[ -n ${value} ]]; then
       args+=(--override-"${key}" "${value}")
     fi
   done

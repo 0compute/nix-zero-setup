@@ -1,5 +1,5 @@
 name: Nix Seed
-description: Build and push Nix Seed environments to GHCR
+description: Build Nix Seed images and push to registry
 
 inputs:
 
@@ -7,16 +7,14 @@ inputs:
     description: Extra nix.conf entries
 
   seed_attr:
-    description: Flake package attribute of the build seed
+    description: Flake package attribute of the Seed
     default: .#seed
 
   registry:
     description: Container registry (default ghcr.io)
     default: ghcr.io
   github_token:
-    description: Hub Token for registry login
-  tags:
-    description: Extra tags (space-separated)
+    description: GitHub Token for registry login
 
   cachix_name:
     description: Cachix cache name
@@ -58,11 +56,4 @@ runs:
       shell: bash
       run: |-
         set -euo pipefail
-        tags=()
-        if [[ -n "${{ inputs.tags }}" ]]; then
-          read -ra parsed_tags <<< "${{ inputs.tags }}"
-          for tag in "${parsed_tags[@]}"; do
-            tags+=(--tag "$tag")
-          done
-        fi
         nix run .#publish -- "${tags[@]}" ${{ inputs.registry }}/${{ github.repository }} ${{ github.sha }}

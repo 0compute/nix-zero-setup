@@ -8,8 +8,7 @@
             head = list: builtins.elemAt list 0;
             concatMap = f: list: builtins.concatLists (map f list);
             mapAttrsToList =
-              f: attrs:
-              map (name: f name attrs.${name}) (builtins.attrNames attrs);
+              f: attrs: map (name: f name attrs.${name}) (builtins.attrNames attrs);
             removeAttrs = attrs: names: builtins.removeAttrs attrs names;
             concatStringsSep = sep: list: builtins.concatStringsSep sep list;
             getExe = pkg: "${pkg}/bin/nix";
@@ -33,7 +32,8 @@
           cacert = {
             outPath = "/etc/ssl/certs";
           };
-          dockerTools.buildLayeredImage = args:
+          dockerTools.buildLayeredImage =
+            args:
             derivation {
               name = args.name;
               builder = "/bin/bash";

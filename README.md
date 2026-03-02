@@ -1,14 +1,10 @@
 # Nix Seed
 
-Nix on ephemeral CI: happy-path (source-only change) **build setup is
-functionally instant (\<10s)**.
+Nix on ephemeral CI: source-only change **build setup \<10s**.
 
-Dependencies shipped as content-addressed [OCI] layers.
+Dependencies as content-addressed [OCI] layers.
 
-Explicit trust anchors built-in.
-
-Docs → [Design](./DESIGN.md) / [Threat Actors](./THREAT-ACTORS.md) /
-[Plain-English overview](./PLAIN-ENGLISH.md).
+Explicit trust anchors.
 
 > Supply chain, secured: $$$
 >
@@ -16,13 +12,15 @@ Docs → [Design](./DESIGN.md) / [Threat Actors](./THREAT-ACTORS.md) /
 >
 > Flow state, uninterrupted: Priceless.
 
+Docs → [Design](./DESIGN.md) / [Threat Actors](./THREAT-ACTORS.md) /
+[Plain-English Overview](./PLAIN-ENGLISH.md).
+
 ## Performance
 
-`actions/cache` pegs the runner by forcing it to transfer a monolithic tarball
-then sequentially extract it. Post-job, the sequence must be completed in
-reverse.
+`actions/cache` burns the runner by forcing it to copy then sequentially extract
+a monolithic tarball. Post-job, the sequence must be completed in reverse.
 
-OCI layers stream and mount concurrently over the network.
+OCI layers stream and mount in parallel.
 
 The difference is Night and Day.
 
@@ -70,8 +68,8 @@ instance with an N-of-M independent builder quorum.
 When the configured builder quorum is reached, the Master Builder creates a
 signed git tag (format configurable) on the source commit.
 
-- Guarantee: No builder, organisation, or jurisdiction, **apart from
-  [.gov](./DESIGN.md#usa) or a compromised Master Builder**, can forge a
+- Guarantee: No builder, organisation, or jurisdiction, **except
+  [.gov](./THREAT-ACTORS.md#usa) or a compromised Master Builder**, can forge a
   release.
 - Attack Surface: As for [Innocent](#trust-level-innocent). The Master Builder,
   as a central actor, is a juicy target.
@@ -88,7 +86,7 @@ signed git tag (format configurable) on the source commit.
 N-of-M independent builder quorum.
 
 - Guarantee: Hard Math. No builder, organisation, or jurisdiction can forge a
-  release. Source:
+  release. Backing:
   - **Full-source bootstrap**
   - **Immutable ledger**
   - **No central actor**

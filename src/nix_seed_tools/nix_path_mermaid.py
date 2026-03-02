@@ -292,9 +292,7 @@ def title_map_for_paths(paths: list[str], run: CommandRunner):
     """
     derivers = load_derivers(paths, run)
     # Sort for deterministic command input, which is worth O(n log n) here.
-    drv_paths = sorted(
-        {drv for drv in derivers.values() if isinstance(drv, str)}
-    )
+    drv_paths = sorted({drv for drv in derivers.values() if isinstance(drv, str)})
     derivation_data = load_derivations(drv_paths, run)
     return parse_derivation_json(derivation_data)
 
@@ -369,10 +367,7 @@ def generate_mermaid(store_path: Path, run: CommandRunner = run_command):
     low, high = quantile_thresholds(closure_sizes)
     # Sort for deterministic output, which is worth O(n log n) here.
     ordered_paths = sorted(path_info.keys())
-    node_ids = {
-        path: f"n{index}"
-        for index, path in enumerate(ordered_paths)
-    }
+    node_ids = {path: f"n{index}" for index, path in enumerate(ordered_paths)}
     lines = [
         "graph TD",
         "classDef sizeGreen fill:#8fd694,stroke:#333,stroke-width:1px",
@@ -391,10 +386,7 @@ def generate_mermaid(store_path: Path, run: CommandRunner = run_command):
         label = label.replace('"', "'")
         node_id = node_ids[path]
         lines.append(f'{node_id}["{label}"]')
-        lines.append(
-            f"class {node_id} "
-            f"{class_for_size(info.closure_size, low, high)}"
-        )
+        lines.append(f"class {node_id} {class_for_size(info.closure_size, low, high)}")
     for path in ordered_paths:
         node_id = node_ids[path]
         for ref in path_info[path].references:

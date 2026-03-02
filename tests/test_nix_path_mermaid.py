@@ -343,9 +343,7 @@ def test_generate_mermaid_fallback_title():
 def test_generate_mermaid_without_closure_sizes():
     def fake_run(args, input_text=None):
         if args[:2] == ["nix", "path-info"]:
-            return json.dumps(
-                [{"path": "/nix/store/x", "references": []}]
-            )
+            return json.dumps([{"path": "/nix/store/x", "references": []}])
         if args[:3] == ["nix-store", "--query", "--deriver"]:
             return "unknown-deriver\n"
         if args[:3] == ["nix", "derivation", "show"]:

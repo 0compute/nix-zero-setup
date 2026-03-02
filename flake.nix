@@ -6,151 +6,113 @@
 
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
-    artstd = {
-      url = "github:0compute/artstd";
+    seed-self.url = "github:0compute/nix-seed";
+
+    devshell = {
+      url = "github:numtide/devshell";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    emanote = {
+      url = "github:srid/emanote";
       inputs = {
-        flake-utils.follows = "flake-utils";
+        flake-parts.follows = "flake-parts";
+        git-hooks.follows = "git-hooks";
         nixpkgs.follows = "nixpkgs";
-        nix-seed.inputs = {
-          flake-utils.follows = "flake-utils";
-          nixpkgs.follows = "nixpkgs";
-          pyproject-nix.follows = "pyproject-nix";
-          systems.follows = "systems";
-        };
-        systems.follows = "systems";
       };
     };
 
+    flake-parts.url = "github:hercules-ci/flake-parts";
+
+    # transitive: poetry2nix
     flake-utils = {
       url = "github:numtide/flake-utils";
       inputs.systems.follows = "systems";
     };
 
-    pyproject-nix = {
-      url = "github:nix-community/pyproject.nix";
+    git-hooks = {
+      url = "github:cachix/git-hooks.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    github-actions-nix = {
+      url = "github:synapdeck/github-actions-nix";
+      inputs = {
+        flake-parts.follows = "flake-parts";
+        nixpkgs.follows = "nixpkgs";
+      };
+    };
+
+    # TODO: implement
+    gitlab-ci = {
+      url = "git+https://gitlab.horizon-haskell.net/nix/gitlab-ci.git";
+      inputs = {
+        flake-parts.follows = "flake-parts";
+        nixpkgs.follows = "nixpkgs";
+        treefmt-nix.follows = "treefmt-nix";
+      };
+    };
+
+    mkdocs-flake = {
+      url = "github:applicative-systems/mkdocs-flake";
+      inputs = {
+        flake-parts.follows = "flake-parts";
+        nixpkgs.follows = "nixpkgs";
+        poetry2nix.follows = "poetry2nix";
+      };
+    };
+
+    nix-attest = {
+      url = "github:kingarrrt/nix-attest";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # transitive: nix-unit, poetry2nix
+    nix-github-actions = {
+      url = "github:nix-community/nix-github-actions";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    nix-unit = {
+      url = "github:nix-community/nix-unit";
+      inputs = {
+        nix-github-actions.follows = "nix-github-actions";
+        nixpkgs.follows = "nixpkgs";
+        flake-parts.follows = "flake-parts";
+        treefmt-nix.follows = "treefmt-nix";
+      };
+    };
+
+    nix2container = {
+      url = "github:nlewo/nix2container";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # transitive: mkdocs-flake, treefmt-nix
+    poetry2nix = {
+      url = "github:nix-community/poetry2nix";
+      inputs = {
+        flake-utils.follows = "flake-utils";
+        nix-github-actions.follows = "nix-github-actions";
+        nixpkgs.follows = "nixpkgs";
+        systems.follows = "systems";
+        treefmt-nix.follows = "treefmt-nix";
+      };
+    };
+
     systems.url = "github:nix-systems/default";
+
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
   };
 
   outputs =
     inputs:
-    let
-      inherit (inputs.nixpkgs) lib;
-      inherit (inputs.artstd.lib) flakeSet;
-      mkSeed = import ./mkseed.nix;
-    in
-    flakeSet {
-
-      inherit (inputs) self;
-
-      lib = { inherit mkSeed; };
-
-      apps = pkgs: {
-
-        publish = {
-          type = "app";
-          program = lib.getExe (
-            pkgs.writeShellApplication {
-              name = "publish";
-              runtimeInputs = with pkgs; [
-                docker
-                gnutar
-                gzip
-                jq
-                cosign
-                podman
-              ];
-              text = builtins.readFile ./bin/publish;
-            }
-          );
-        };
-
-        verify = {
-          type = "app";
-          program = lib.getExe (
-            pkgs.writeShellApplication {
-              name = "verify";
-              runtimeInputs = with pkgs; [
-                coreutils
-                jq
-                oras
-                skopeo
-              ];
-              text = builtins.readFile ./bin/verify;
-            }
-          );
-        };
-      };
-
-      packages =
-        pkgs:
-        let
-          inherit (inputs) self;
-          name = "nix-seed";
-          seed = mkSeed {
-            inherit name pkgs self;
-            selfFilter =
-              drv:
-              let
-                # CHECK: needs the or?
-                drvName = drv.name or "";
-              in
-              !(builtins.any (name: lib.hasPrefix name drvName) [
-                # filter self from seed otherwise this is circular
-                name
-                # filter examples since we want them built in check
-                "examples"
-              ]);
-            # no rev when using `nix build path:.`
-            tag = self.rev or self.dirtyRev or null;
-          };
-        in
-        {
-          default = seed;
-          inherit seed;
-        };
-
-      checks =
-        pkgs:
-        let
-          attrs = { inherit pkgs mkSeed; };
-        in
-        {
-
-          nix-unit = import ./tests/unit.nix attrs;
-
-          nix-functional = import ./tests/functional.nix attrs;
-
-          bash =
-            pkgs.runCommand "bats-tests"
-              {
-                nativeBuildInputs = with pkgs; [ bats ];
-                src = ./.;
-              }
-              ''
-                cd "$src"
-                ${lib.getExe pkgs.bats} tests/bin | tee $out
-              '';
-
-          examples = import ./tests/examples.nix (
-            attrs // { inherit (inputs) flake-utils pyproject-nix; }
-          );
-
-        };
-
-      seed = {
-        builders = {
-          # TODO: CI configs
-          # github
-          # gitlab
-          # another
-        };
-        quorum = 3;
-      };
-
+    inputs.flake-parts.lib.mkFlake { inherit inputs; } {
+      imports = [ ./modules ];
     };
 
 }

@@ -67,8 +67,8 @@ setup() {
   assert_file_contains "${LOG_DIR}/curl.log" \
     "https://circleci.com/api/v2/project/gh/org/repo/pipeline"
   assert_file_contains "${LOG_DIR}/curl.log" "Circle-Token: token"
-  assert_file_contains "${LOG_DIR}/curl.stdin.1" "\"branch\":\"main\""
-  assert_file_contains "${LOG_DIR}/curl.stdin.1" "\"sha\":\"deadbeef\""
+  assert_file_contains "${LOG_DIR}/curl.stdin.1" '"branch":"main"'
+  assert_file_contains "${LOG_DIR}/curl.stdin.1" '"sha":"deadbeef"'
 }
 
 @test "trigger-ci appveyor requires token account slug" {
@@ -90,9 +90,9 @@ setup() {
   assert_file_contains "${LOG_DIR}/curl.log" \
     "https://ci.appveyor.com/api/builds"
   assert_file_contains "${LOG_DIR}/curl.log" "Authorization: Bearer token"
-  assert_file_contains "${LOG_DIR}/curl.stdin.1" "\"accountName\":\"org\""
-  assert_file_contains "${LOG_DIR}/curl.stdin.1" "\"projectSlug\":\"repo\""
-  assert_file_contains "${LOG_DIR}/curl.stdin.1" "\"commitId\":\"deadbeef\""
+  assert_file_contains "${LOG_DIR}/curl.stdin.1" '"accountName":"org"'
+  assert_file_contains "${LOG_DIR}/curl.stdin.1" '"projectSlug":"repo"'
+  assert_file_contains "${LOG_DIR}/curl.stdin.1" '"commitId":"deadbeef"'
 }
 
 @test "trigger-ci rejects unsupported provider" {
