@@ -1,5 +1,6 @@
 {
-  config.flake.seedCfg.builders = {
+
+  flake.seedCfg.builders = {
 
     # Alibaba Cloud Flow: https://www.alibabacloud.com/help/en/yunxiao
     alibaba = {
@@ -1695,4 +1696,5 @@
     };
 
   };
+
 }

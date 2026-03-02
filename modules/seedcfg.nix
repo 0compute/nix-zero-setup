@@ -1,6 +1,6 @@
 { lib, ... }:
 let
-  inherit (lib) types mkOption;
+  inherit (lib) types mkEnableOption mkOption;
 
   runnerType = types.submodule {
     options = {
@@ -52,7 +52,6 @@ let
                       "linux"
                     ];
                   };
-
                   version = mkOption {
                     description = "Kernel version.";
                     default = "unknown";
@@ -218,11 +217,12 @@ let
 
   providerType = types.submodule {
     options = {
+      enable = mkEnableOption "Enable provider";
       master = mkOption {
         type = types.bool;
         default = false;
         # TODO: enforce single master
-        description = "Whether this provider is the primary source of truth.";
+        description = "Whether this provider is the master builder.";
       };
       cloud = mkOption {
         type = types.nullOr cloudType;
@@ -246,39 +246,33 @@ in
 
   options.flake.seedCfg = {
 
-    builders = mkOption {
-      type = types.attrsOf providerType;
-      description = "CI/CD builder platforms.";
-    };
-
     fallbackRegistry = mkOption {
       default = "ghcr.io";
       type = types.str;
-      description = "Fallback registry to use if a builder doesn't specify one.";
+      description = "Fallback registry if a builder doesn't specify one.";
     };
 
     rekor = mkOption {
-      description = "Rekor configuration.";
-      default = { };
-      type = types.submodule {
-        options = {
-          url = mkOption {
-            default = "https://rekor.sigstore.dev";
-            type = types.str;
-            description = "URL of the Rekor transparency log.";
-          };
-          quorum = mkOption {
-            default = null;
-            type = with types; nullOr int;
-            description = "Number of required signers for a quorum. Null means unanimous.";
-          };
-          deadline = mkOption {
-            default = "30m";
-            type = types.str;
-            description = "Deadline duration for the request.";
-          };
-        };
-      };
+      default = "https://rekor.sigstore.dev";
+      type = types.str;
+      description = "URL of the Rekor transparency log.";
+    };
+
+    builders = mkOption {
+      type = types.attrsOf providerType;
+      description = "Builder platforms.";
+    };
+
+    quorum = mkOption {
+      default = null;
+      type = with types; nullOr int;
+      description = "Number of required signers for a quorum. Null means unanimous.";
+    };
+
+    deadline = mkOption {
+      default = "30m";
+      type = types.str;
+      description = "Deadline after which the Master Builder fails the build.";
     };
 
   };
